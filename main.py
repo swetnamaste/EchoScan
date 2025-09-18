@@ -1,5 +1,6 @@
 from detectors import sbsm, delta_s, motif, echoarc, nsnl, echocradle, echostamp, glyph, foldback, obelisk, stuttergate, mimetic_drift, voicecradle, ecc_core, ai_drift, collapseglyph
 from vault import vault, traceview
+import sbsh_module
 
 def normalize_input(input_file, input_type):
     # Placeholder: Add file reading and normalization logic per modality
@@ -8,6 +9,10 @@ def normalize_input(input_file, input_type):
 
 def run_pipeline(input_file, input_type, **flags):
     S = normalize_input(input_file, input_type)
+    
+    # Generate SBSH hash early for integration with other modules
+    sbsh_result = sbsh_module.sbsh_hash(S, flags.get("glyph_digest"))
+    
     # SBSM is the central stem
     sbsm_result = sbsm.run(S)
     delta_s_result = delta_s.run(S)
@@ -46,6 +51,7 @@ def run_pipeline(input_file, input_type, **flags):
         "ecc": ecc_result,
         "ai_drift": ai_drift_result,
         "collapseglyph": collapseglyph_result,
+        "sbsh": sbsh_result,  # Add SBSH results to pipeline output
     }
 
     echo_score = compute_echo_score(results)
