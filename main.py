@@ -1,5 +1,7 @@
 from detectors import sbsm, delta_s, motif, echoarc, nsnl, echocradle, echostamp, glyph, foldback, obelisk, stuttergate, mimetic_drift, voicecradle, ecc_core, ai_drift, collapseglyph
-from vault import vault, traceview
+from vault.vault import vault
+from vault.traceview import traceview
+import echoverifier
 
 def normalize_input(input_file, input_type):
     # Placeholder: Add file reading and normalization logic per modality
@@ -28,6 +30,9 @@ def run_pipeline(input_file, input_type, **flags):
     ai_drift_result = ai_drift.run(S, delta_s_result, sbsm_result)
     collapseglyph_result = collapseglyph.run(S, delta_s_result, sbsm_result)
 
+    # EchoVerifier firewall validation
+    echoverifier_result = echoverifier.run(S, mode="verify")
+
     # Aggregate scoring, decision, advisory, output
     results = {
         "sbsm": sbsm_result,
@@ -46,6 +51,7 @@ def run_pipeline(input_file, input_type, **flags):
         "ecc": ecc_result,
         "ai_drift": ai_drift_result,
         "collapseglyph": collapseglyph_result,
+        "echoverifier": echoverifier_result,
     }
 
     echo_score = compute_echo_score(results)

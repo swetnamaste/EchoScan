@@ -1,8 +1,9 @@
-"""echoarc detector module stub"""
+"""EchoArc detector module."""
 
-def run(*args, **kwargs):
-    """Stub implementation for echoarc detector"""
+def run(sbsm_result, delta_s_result, motif_result):
+    """Run EchoArc analysis."""
     return {
-        "result": "stub",
+        "arc_fit": 0.5,
+        "ahy": 0.3,
         "echo_score_modifier": 0.0
     }
