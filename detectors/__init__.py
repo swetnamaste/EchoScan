@@ -1,1 +1,1 @@
-# Detectors module
+# Detectors package for EchoScan

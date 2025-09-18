@@ -1,5 +1,8 @@
-"""Stub implementation."""
+"""collapseglyph detector module stub"""
 
 def run(*args, **kwargs):
-    """Stub detector.""" 
-    return {"echo_score_modifier": 0.0}
+    """Stub implementation for collapseglyph detector"""
+    return {
+        "result": "stub",
+        "echo_score_modifier": 0.0
+    }

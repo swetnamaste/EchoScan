@@ -1,1 +1,1 @@
-# Vault module
+# Vault package for EchoScan
