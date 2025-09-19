@@ -47,12 +47,36 @@
       "timestamp": 1758243517.6278942,
       "usage_count": 0,
       "drift_history": []
+    },
+    "academic": {
+      "reference_vector": [
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1.0,
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.5,
+        0.6
+      ],
+      "confidence": 0.5,
+      "timestamp": 1758243741.0980186,
+      "usage_count": 0,
+      "drift_history": []
     }
   },
   "last_baseline_update": 0.0,
   "trusted_sources": [],
   "metadata": {
-    "total_anchors": 2,
-    "last_saved": 1758243517.6278977
+    "total_anchors": 3,
+    "last_saved": 1758243741.0980208
   }
 }

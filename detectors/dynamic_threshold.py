@@ -106,12 +106,12 @@ class BaselineManager:
         if metric_name not in self.baselines or len(self.baselines[metric_name]) < 5:
             # Fallback to default thresholds
             defaults = {
-                "delta_s": {"mean": 0.005, "std": 0.002, "threshold_low": 0.001, "threshold_high": 0.01},
-                "sbsm_drift": {"mean": 2.0, "std": 1.0, "threshold_low": 0.5, "threshold_high": 5.0},
-                "echo_sense": {"mean": 0.8, "std": 0.1, "threshold_low": 0.6, "threshold_high": 0.95},
-                "quirk_score": {"mean": 0.4, "std": 0.2, "threshold_low": 0.1, "threshold_high": 0.8}
+                "delta_s": {"mean": 0.005, "std": 0.002, "threshold_low": 0.001, "threshold_high": 0.01, "freshness": 0.5},
+                "sbsm_drift": {"mean": 2.0, "std": 1.0, "threshold_low": 0.5, "threshold_high": 5.0, "freshness": 0.5},
+                "echo_sense": {"mean": 0.8, "std": 0.1, "threshold_low": 0.6, "threshold_high": 0.95, "freshness": 0.5},
+                "quirk_score": {"mean": 0.4, "std": 0.2, "threshold_low": 0.1, "threshold_high": 0.8, "freshness": 0.5}
             }
-            return defaults.get(metric_name, {"mean": 0.5, "std": 0.1, "threshold_low": 0.3, "threshold_high": 0.7})
+            return defaults.get(metric_name, {"mean": 0.5, "std": 0.1, "threshold_low": 0.3, "threshold_high": 0.7, "freshness": 0.5})
         
         values = list(self.baselines[metric_name])
         mean_val = statistics.mean(values)
@@ -210,7 +210,7 @@ def calculate_confidence_intervals(
         "baseline_mean": mean_val,
         "baseline_std": std_val,
         "intervals": intervals,
-        "baseline_freshness": baseline_stats["freshness"]
+        "baseline_freshness": baseline_stats.get("freshness", 0.0)
     }
 
 

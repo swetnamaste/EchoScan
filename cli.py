@@ -133,6 +133,15 @@ Integration hooks available: TraceView, EchoVault, CollapseGlyph, EchoCradle, Ec
     parser.add_argument('--output-file', type=str, help='Write output to file')
     parser.add_argument('--json', action='store_true', help='Output results in JSON format')
     parser.add_argument('--pipeline', action='store_true', help='Run full detection pipeline')
+    
+    # Enhanced framework options
+    parser.add_argument('--enhanced-pipeline', action='store_true', help='Run enhanced framework pipeline with all 6 enhancements')
+    parser.add_argument('--context-drift', type=str, help='Analyze context drift patterns across text blocks')
+    parser.add_argument('--quirk-analysis', type=str, help='Detect human irregularities and quirks')
+    parser.add_argument('--cross-modal', type=str, help='Cross-modal consistency analysis')
+    parser.add_argument('--consensus-report', action='store_true', help='Show detailed consensus voting results')
+    parser.add_argument('--adaptive-threshold', action='store_true', help='Use dynamic adaptive thresholds')
+    parser.add_argument('--rolling-reference', action='store_true', help='Enable rolling reference updates')
 
     return parser
 
@@ -259,9 +268,77 @@ def main_cli():
             print(json.dumps(result, indent=2, default=str))
             return
 
-        # Full pipeline (new logic)
+        # Enhanced framework pipeline
+        if args.enhanced_pipeline and input_file:
+            result = main.run_pipeline(input_file, "text", quiet=args.json)
+            if not args.json:
+                print("🚀 ENHANCED ECHOSCAN FRAMEWORK RESULTS")
+                print("=" * 50)
+                print(f"📊 EchoScore: {result['EchoScore']}/100")
+                print(f"🎯 Decision: {result['Decision Label']}")
+                print(f"🔍 Primary Verdict: {result['Primary Verdict']}")
+                print(f"💡 Confidence: {result['Confidence']:.3f}")
+                
+                print(f"\n📋 Advisory Flags ({len(result.get('Advisory Flags', []))}):")
+                for flag in result.get('Advisory Flags', [])[:5]:  # Show first 5
+                    print(f"  ⚠️  {flag}")
+                
+                print("\n🔧 Module Results:")
+                full_results = result.get('FullResults', {})
+                for module, mod_result in full_results.items():
+                    if isinstance(mod_result, dict):
+                        verdict = mod_result.get('verdict', mod_result.get('source_classification', 'N/A'))
+                        modifier = mod_result.get('echo_score_modifier', 0.0)
+                        penalty = mod_result.get('echo_score_penalty', 0.0)
+                        score_impact = modifier + penalty
+                        icon = "✅" if score_impact > 0 else "❌" if score_impact < 0 else "⚪"
+                        print(f"  {icon} {module}: {verdict} ({score_impact:+.1f})")
+                
+                if args.consensus_report and 'consensus_voting' in full_results:
+                    print("\n🗳️  CONSENSUS VOTING DETAILS:")
+                    consensus = full_results['consensus_voting']
+                    print(f"  Agreement Level: {consensus.get('consensus_results', {}).get('agreement_level', 0):.3f}")
+                    disagreements = consensus.get('disagreement_count', 0)
+                    if disagreements > 0:
+                        print(f"  ⚡ {disagreements} disagreement(s) detected between modules")
+                    
+            else:
+                print(json.dumps(result, indent=2, default=str))
+            return
+
+        # Individual enhanced modules
+        if args.context_drift:
+            from detectors import context_drift
+            result = context_drift.run(args.context_drift)
+            if not args.json:
+                print("📊 CONTEXT DRIFT ANALYSIS:")
+                print(f"Block Count: {result['block_count']}")
+                print(f"Mean Drift: {result['mean_drift']:.6f}")
+                print(f"Drift Consistency: {result['drift_consistency']:.3f}")
+                print(f"Anomaly Score: {result['anomaly_score']:.3f}")
+                print(f"Classification: {result['source_classification']}")
+            else:
+                print(json.dumps(result, indent=2))
+            return
+
+        if args.quirk_analysis:
+            from detectors import quirk_injection
+            result = quirk_injection.run(args.quirk_analysis)
+            if not args.json:
+                print("🎭 QUIRK ANALYSIS:")
+                print(f"Quirk Score: {result['quirk_score']:.3f}")
+                print(f"Classification: {result['source_classification']}")
+                analysis = result['quirk_analysis']
+                print(f"Fillers: {analysis['fillers']['count']} (density: {analysis['fillers']['density']:.3f})")
+                print(f"Hesitations: {analysis['hesitations']['total_hesitation_markers']}")
+                print(f"Tangents: {analysis['tangents']['total_tangents']}")
+            else:
+                print(json.dumps(result, indent=2))
+            return
+
+        # Full pipeline (existing logic)
         if args.pipeline and input_file:
-            result = main.run_pipeline(input_file, "text")
+            result = main.run_pipeline(input_file, "text", quiet=args.json)
             if not args.json:
                 print("Full Pipeline Results:")
                 print(f"Echo Score: {result['EchoScore']}")

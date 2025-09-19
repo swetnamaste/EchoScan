@@ -1,4 +1,5 @@
 import time
+import sys
 
 def compute_advisory_flags(results):
     """
@@ -75,7 +76,7 @@ def compute_advisory_flags(results):
     return unique_flags
 
 
-def run_pipeline(input_data, input_type="text", **kwargs):
+def run_pipeline(input_data, input_type="text", quiet=False, **kwargs):
     """
     Run the complete EchoScan pipeline with framework-aligned enhancements.
     
@@ -121,21 +122,25 @@ def run_pipeline(input_data, input_type="text", **kwargs):
     
     try:
         # Phase 1: Core EchoVerifier analysis
-        print("Running EchoVerifier...")
+        if not quiet:
+            print("Running EchoVerifier...", file=sys.stderr)
         echoverifier_result = echoverifier.run(text_content, mode="verify")
         pipeline_results["echoverifier"] = echoverifier_result
         
         # Phase 2: Enhanced framework detectors
-        print("Running Context Drift analysis...")
+        if not quiet:
+            print("Running Context Drift analysis...", file=sys.stderr)
         context_result = context_drift.run(text_content)
         pipeline_results["context_drift"] = context_result
         
-        print("Running Quirk Injection analysis...")
+        if not quiet:
+            print("Running Quirk Injection analysis...", file=sys.stderr)
         quirk_result = quirk_injection.run(text_content)
         pipeline_results["quirk_injection"] = quirk_result
         
         # Phase 3: Cross-modal analysis (if applicable)
-        print("Running Cross-Modal analysis...")
+        if not quiet:
+            print("Running Cross-Modal analysis...", file=sys.stderr)
         cross_modal_kwargs = {
             "text_data": text_content,
             "audio_data": kwargs.get("audio_data"),
@@ -145,28 +150,33 @@ def run_pipeline(input_data, input_type="text", **kwargs):
         pipeline_results["cross_modal"] = cross_modal_result
         
         # Phase 4: Rolling reference analysis
-        print("Running Rolling Reference analysis...")
+        if not quiet:
+            print("Running Rolling Reference analysis...", file=sys.stderr)
         fold_vector = echoverifier_result.get("fold_vector", [])
         metadata = kwargs.get("metadata", {})
         rolling_ref_result = rolling_reference.run(text_content, fold_vector, metadata)
         pipeline_results["rolling_reference"] = rolling_ref_result
         
         # Phase 5: Dynamic thresholding
-        print("Running Dynamic Thresholding...")
+        if not quiet:
+            print("Running Dynamic Thresholding...", file=sys.stderr)
         try:
             dynamic_result = dynamic_threshold.run(text_content, pipeline_results)
             pipeline_results["dynamic_threshold"] = dynamic_result
         except Exception as e:
-            print(f"Dynamic thresholding failed: {e}")
+            if not quiet:
+                print(f"Dynamic thresholding failed: {e}", file=sys.stderr)
             pipeline_results["dynamic_threshold"] = {"error": str(e)}
         
         # Phase 6: Consensus voting
-        print("Running Consensus Voting...")
+        if not quiet:
+            print("Running Consensus Voting...", file=sys.stderr)
         try:
             consensus_result = consensus_voting.run(text_content, pipeline_results)
             pipeline_results["consensus_voting"] = consensus_result
         except Exception as e:
-            print(f"Consensus voting failed: {e}")
+            if not quiet:
+                print(f"Consensus voting failed: {e}", file=sys.stderr)
             consensus_result = {
                 "consensus_verdict": "Unknown",
                 "consensus_confidence": 0.5,
