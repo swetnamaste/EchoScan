@@ -14,6 +14,9 @@ from pathlib import Path
 # Add the current directory to Python path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# Import monitoring modules
+from monitoring import log_user_anomaly
+
 # SBSH module imports
 try:
     from sbsh_module import sbsh_hash, validate_sbsh_output
@@ -133,6 +136,10 @@ Integration hooks available: TraceView, EchoVault, CollapseGlyph, EchoCradle, Ec
     parser.add_argument('--output-file', type=str, help='Write output to file')
     parser.add_argument('--json', action='store_true', help='Output results in JSON format')
     parser.add_argument('--pipeline', action='store_true', help='Run full detection pipeline')
+    # Edge case monitoring flags
+    parser.add_argument('--feedback-log', type=str, help='Log user-reported anomaly to edge_cases.log')
+    parser.add_argument('--verbose', action='store_true', help='Verbose output with detailed logging')
+    parser.add_argument('--drill', choices=['provenance'], help='Drill down into specific analysis areas')
 
     return parser
 
@@ -183,6 +190,26 @@ def main_cli():
         if args.sbsh_chain_link:
             result = handle_sbsh_chain_link(args.sbsh_chain_link, args.previous_hash)
             print(json.dumps(result, indent=2))
+            return
+
+        # Edge case monitoring flags
+        if args.feedback_log:
+            target_input = args.feedback_log
+            anomaly_description = input("Enter anomaly description: ").strip()
+            
+            if not anomaly_description:
+                print("Error: Anomaly description is required for feedback logging.")
+                return
+            
+            feedback_result = log_user_anomaly(target_input, anomaly_description)
+            
+            if args.json:
+                print(json.dumps(feedback_result, indent=2))
+            else:
+                print(f"📝 Feedback logged successfully:")
+                print(f"   Input: {target_input[:50]}...")
+                print(f"   Description: {anomaly_description}")
+                print(f"   Timestamp: {feedback_result['timestamp']}")
             return
 
         # EchoVerifier flags

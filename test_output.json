@@ -1,0 +1,136 @@
+{
+  "input": "This is a test message",
+  "verdict": "Plausible",
+  "delta_s": 0.0017,
+  "fold_vector": [
+    0.032977,
+    0.078075,
+    0.117647,
+    0.151159,
+    0.120321,
+    0.220321,
+    0.143494,
+    0.045633,
+    0.155615,
+    0.057041,
+    0.227451,
+    0.216043,
+    0.266488,
+    0.289483,
+    0.085561,
+    0.310873
+  ],
+  "glyph_id": "GHX-087A",
+  "ancestry_depth": 2,
+  "echo_sense": 0.891608,
+  "vault_permission": true,
+  "confidence_band": {
+    "score": 0.9746,
+    "level": "high",
+    "factors": {
+      "base_echo_sense": 0.8916,
+      "drift_penalty": 0.017,
+      "ancestry_bonus": 0.1
+    }
+  },
+  "trust_chain": {
+    "total_levels": 8,
+    "chain_links": [
+      {
+        "level": 0,
+        "component": "input_validation",
+        "status": "verified",
+        "details": "Input received and parsed successfully"
+      },
+      {
+        "level": 1,
+        "component": "sbsh_hash",
+        "status": "computed",
+        "details": "Symbolic hash generated"
+      },
+      {
+        "level": 2,
+        "component": "delta_s_drift",
+        "status": "analyzed",
+        "details": "Drift analysis completed"
+      },
+      {
+        "level": 3,
+        "component": "echo_fold",
+        "status": "vectorized",
+        "details": "Vector similarity computed"
+      },
+      {
+        "level": 4,
+        "component": "glyph_classification",
+        "status": "classified",
+        "details": "Glyph identified as GHX-087A"
+      },
+      {
+        "level": 5,
+        "component": "ancestry_level_0",
+        "status": "traced",
+        "details": "Ancestry level 0 verification"
+      },
+      {
+        "level": 6,
+        "component": "ancestry_level_1",
+        "status": "traced",
+        "details": "Ancestry level 1 verification"
+      },
+      {
+        "level": 7,
+        "component": "vault_permission",
+        "status": "granted",
+        "details": "Vault storage permission evaluated"
+      }
+    ],
+    "chain_integrity": "valid",
+    "trust_score": 0.4
+  },
+  "explanation": {
+    "summary": "Content shows mixed signals - could be authentic or generated",
+    "detailed_factors": [
+      "Content shows mixed signals - could be authentic or generated",
+      "Low drift value (0.0017) supports content stability",
+      "High trust score indicates strong authenticity signals"
+    ],
+    "recommendation": "Content requires additional verification - use caution in high-stakes applications",
+    "explanation_confidence": "high"
+  },
+  "downstream": {
+    "echoseal": {
+      "drift_trace_id": "seal_25B9",
+      "trace_status": "active"
+    },
+    "echoroots": {
+      "root_chain": [
+        "root_0_GHX-087A",
+        "root_1_GHX-087A"
+      ],
+      "root_verification": "pending"
+    },
+    "echovault": {
+      "vault_id": "vault_13FA",
+      "storage_level": "secure",
+      "access_granted": true
+    },
+    "echosense_extended": {
+      "network_score": 0.1783216,
+      "trust_level": "high",
+      "network_nodes": 17
+    },
+    "sds1": {
+      "dna_sequence": "AATGATGATAATGAATTGGT",
+      "sequence_id": "SDS1_GHX-087A",
+      "genetic_markers": 3,
+      "sequence_integrity": "stable"
+    },
+    "rps1": {
+      "paradox_id": "RPS1_087A",
+      "paradox_score": 0.157386375,
+      "synthesis_state": "unresolved",
+      "recursive_depth": 0
+    }
+  }
+}

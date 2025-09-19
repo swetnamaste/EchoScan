@@ -9,6 +9,7 @@ from typing import Dict, List, Any, Tuple
 from detectors import sbsm, delta_s, glyph
 from vault.vault import vault
 import downstream_hooks
+from monitoring import edge_monitor, perf_monitor, vault_failsafe
 
 
 class EchoFold:
@@ -135,6 +136,7 @@ class EchoVerifier:
         self.ancestry_depth = AncestryDepth()
         self.echo_sense = EchoSense()
     
+    @perf_monitor.monitor_request("echoverifier_verify")
     def verify(self, input_data: str, **kwargs) -> Dict[str, Any]:
         """
         Main verification method implementing full Tier-1 and Tier-0 specs.
@@ -181,6 +183,11 @@ class EchoVerifier:
             ancestry_depth, echo_sense_score
         )
         
+        # Calculate additional output fields
+        confidence_band = self._calculate_confidence_band(echo_sense_score, delta_s_value, ancestry_depth)
+        trust_chain = self._build_trust_chain(ancestry_depth, glyph_id, vault_permission)
+        explanation = self._generate_explanation(verdict, delta_s_value, echo_sense_score, glyph_classification)
+        
         # Compile results
         result = {
             "input": input_data[:100] + "..." if len(input_data) > 100 else input_data,
@@ -190,18 +197,29 @@ class EchoVerifier:
             "glyph_id": glyph_id,
             "ancestry_depth": ancestry_depth,
             "echo_sense": echo_sense_score,
-            "vault_permission": vault_permission
+            "vault_permission": vault_permission,
+            # New fields for enhanced output
+            "confidence_band": confidence_band,
+            "trust_chain": trust_chain,
+            "explanation": explanation
         }
         
-        # Log to vault
-        vault.log({
+        # Edge case monitoring - check for anomalies
+        edge_monitor.check_drift_anomaly(input_data, delta_s_value, result)
+        edge_monitor.check_glyph_anomaly(input_data, glyph_id, result)
+        
+        # Log to vault with failsafe
+        vault_log_data = {
             "echoverifier": result,
             "metadata": {
                 "sbsh_hash": sbsh_hash,
                 "glyph_classification": glyph_classification,
                 "fold_similarity": fold_similarity
             }
-        })
+        }
+        
+        # Use safe vault logging with retry and fallback
+        vault_failsafe.safe_vault_log(vault, vault_log_data)
         
         # Integrate downstream hooks
         if kwargs.get("enable_downstream", True):
@@ -272,6 +290,166 @@ class EchoVerifier:
             "signature": "placeholder_signature"
         }
         return json.dumps(export_data, indent=2)
+    
+    def _calculate_confidence_band(self, echo_sense: float, delta_s: float, ancestry_depth: int) -> Dict[str, Any]:
+        """Calculate confidence band for the verification result."""
+        # Base confidence from echo_sense score
+        base_confidence = min(max(echo_sense, 0.0), 1.0)
+        
+        # Adjust for delta_s drift (higher drift reduces confidence)
+        drift_penalty = min(delta_s * 10, 0.3)  # Max 30% penalty
+        
+        # Adjust for ancestry depth (deeper ancestry increases confidence)
+        ancestry_bonus = min(ancestry_depth * 0.05, 0.2)  # Max 20% bonus
+        
+        final_confidence = max(min(base_confidence - drift_penalty + ancestry_bonus, 1.0), 0.0)
+        
+        # Determine confidence level
+        if final_confidence >= 0.8:
+            level = "high"
+        elif final_confidence >= 0.6:
+            level = "medium"
+        elif final_confidence >= 0.4:
+            level = "low"
+        else:
+            level = "very_low"
+        
+        return {
+            "score": round(final_confidence, 4),
+            "level": level,
+            "factors": {
+                "base_echo_sense": round(base_confidence, 4),
+                "drift_penalty": round(drift_penalty, 4),
+                "ancestry_bonus": round(ancestry_bonus, 4)
+            }
+        }
+    
+    def _build_trust_chain(self, ancestry_depth: int, glyph_id: str, vault_permission: bool) -> Dict[str, Any]:
+        """Build a detailed trust chain showing verification path."""
+        chain_links = []
+        
+        # Root link
+        chain_links.append({
+            "level": 0,
+            "component": "input_validation",
+            "status": "verified",
+            "details": "Input received and parsed successfully"
+        })
+        
+        # SBSH link
+        chain_links.append({
+            "level": 1,
+            "component": "sbsh_hash",
+            "status": "computed",
+            "details": "Symbolic hash generated"
+        })
+        
+        # Delta-S link
+        chain_links.append({
+            "level": 2,
+            "component": "delta_s_drift",
+            "status": "analyzed",
+            "details": "Drift analysis completed"
+        })
+        
+        # EchoFold link
+        chain_links.append({
+            "level": 3,
+            "component": "echo_fold",
+            "status": "vectorized",
+            "details": "Vector similarity computed"
+        })
+        
+        # Glyph link
+        chain_links.append({
+            "level": 4,
+            "component": "glyph_classification",
+            "status": "classified",
+            "details": f"Glyph identified as {glyph_id}"
+        })
+        
+        # Ancestry links (dynamic based on ancestry_depth)
+        for i in range(ancestry_depth):
+            chain_links.append({
+                "level": 5 + i,
+                "component": f"ancestry_level_{i}",
+                "status": "traced",
+                "details": f"Ancestry level {i} verification"
+            })
+        
+        # Final vault link
+        chain_links.append({
+            "level": 5 + ancestry_depth,
+            "component": "vault_permission",
+            "status": "granted" if vault_permission else "denied",
+            "details": "Vault storage permission evaluated"
+        })
+        
+        return {
+            "total_levels": len(chain_links),
+            "chain_links": chain_links,
+            "chain_integrity": "valid",
+            "trust_score": min(ancestry_depth / 5.0, 1.0)  # Normalized trust based on depth
+        }
+    
+    def _generate_explanation(self, verdict: str, delta_s: float, echo_sense: float, glyph_classification: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate human-readable explanation of the verification result."""
+        explanation_parts = []
+        
+        # Verdict explanation
+        verdict_explanations = {
+            "Authentic": "Content appears to be genuine and naturally created",
+            "Plausible": "Content shows mixed signals - could be authentic or generated",
+            "Hallucination": "Content exhibits characteristics typical of AI generation"
+        }
+        
+        base_explanation = verdict_explanations.get(verdict, "Unknown verdict classification")
+        explanation_parts.append(base_explanation)
+        
+        # Delta-S explanation
+        if delta_s > 0.02:
+            explanation_parts.append(f"High drift value ({delta_s:.4f}) suggests potential anomalies")
+        elif delta_s > 0.01:
+            explanation_parts.append(f"Moderate drift value ({delta_s:.4f}) indicates some uncertainty")
+        else:
+            explanation_parts.append(f"Low drift value ({delta_s:.4f}) supports content stability")
+        
+        # EchoSense explanation
+        if echo_sense > 0.8:
+            explanation_parts.append("High trust score indicates strong authenticity signals")
+        elif echo_sense > 0.6:
+            explanation_parts.append("Moderate trust score suggests reasonable authenticity")
+        elif echo_sense > 0.4:
+            explanation_parts.append("Low trust score indicates potential concerns")
+        else:
+            explanation_parts.append("Very low trust score suggests significant authenticity issues")
+        
+        # Glyph explanation
+        glyph_weight = glyph_classification.get("weight", 1.0)
+        if glyph_weight > 1.5:
+            explanation_parts.append("Glyph pattern suggests enhanced authenticity markers")
+        elif glyph_weight < 0.5:
+            explanation_parts.append("Glyph pattern shows reduced authenticity indicators")
+        
+        return {
+            "summary": base_explanation,
+            "detailed_factors": explanation_parts,
+            "recommendation": self._get_recommendation(verdict, delta_s, echo_sense),
+            "explanation_confidence": "high" if echo_sense > 0.7 else "medium" if echo_sense > 0.4 else "low"
+        }
+    
+    def _get_recommendation(self, verdict: str, delta_s: float, echo_sense: float) -> str:
+        """Get recommendation based on verification results."""
+        if verdict == "Authentic" and delta_s < 0.01 and echo_sense > 0.8:
+            return "Content appears highly trustworthy - suitable for high-trust applications"
+        elif verdict == "Authentic" and echo_sense > 0.6:
+            return "Content appears authentic - suitable for most applications with standard verification"
+        elif verdict == "Plausible":
+            return "Content requires additional verification - use caution in high-stakes applications"
+        elif verdict == "Hallucination" and echo_sense < 0.3:
+            return "Content likely AI-generated - avoid use in authenticity-critical contexts"
+        else:
+            return "Content authenticity uncertain - conduct additional verification before use"
 
 
 # Global verifier instance

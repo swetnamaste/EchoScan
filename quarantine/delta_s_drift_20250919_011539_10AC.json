@@ -1,0 +1,15 @@
+{
+  "timestamp": "2025-09-19T01:15:39.815739",
+  "reason": "delta_s_drift",
+  "input_data": "Test quarantine input",
+  "metadata": {
+    "delta_s": 0.025,
+    "threshold": 0.02,
+    "result_summary": {
+      "verdict": "Hallucination",
+      "glyph_id": "GHX-test",
+      "echo_sense": 0.5
+    }
+  },
+  "input_hash": -579640461178545732
+}
