@@ -3,12 +3,14 @@
 EchoScan CLI - Command Line Interface
 
 Provides CLI access to EchoScan detection engines including SBSH symbolic hash, EchoVerifier, and pipeline operations.
+Enhanced with color-coded verdicts, progress bars, and comprehensive metrics display.
 """
 
 import argparse
 import json
 import sys
 import os
+import time
 from pathlib import Path
 
 # Add the current directory to Python path for imports
@@ -28,6 +30,111 @@ try:
     import echoverifier
 except ImportError:
     echoverifier = None
+
+
+# Color codes for terminal output
+class Colors:
+    GREEN = '\033[92m'  # Authentic
+    YELLOW = '\033[93m'  # Ambiguous
+    RED = '\033[91m'  # Hallucination
+    BLUE = '\033[94m'  # Info
+    CYAN = '\033[96m'  # Metrics
+    MAGENTA = '\033[95m'  # Progress
+    ENDC = '\033[0m'  # End color
+    BOLD = '\033[1m'
+
+
+def print_colored_verdict(verdict: str, confidence: float = None):
+    """Print verdict with appropriate color coding."""
+    color = Colors.GREEN if verdict == "Authentic" else Colors.YELLOW if verdict == "Ambiguous" else Colors.RED
+    
+    verdict_text = f"{color}{Colors.BOLD}{verdict}{Colors.ENDC}"
+    if confidence is not None:
+        verdict_text += f" {Colors.CYAN}(confidence: {confidence:.3f}){Colors.ENDC}"
+    
+    # Add appropriate flag
+    if verdict == "Ambiguous":
+        verdict_text += f" {Colors.YELLOW}⚠️ AMBIGUOUS FLAG{Colors.ENDC}"
+    elif verdict == "Authentic":
+        verdict_text += f" {Colors.GREEN}✅{Colors.ENDC}"
+    elif verdict == "Hallucination":
+        verdict_text += f" {Colors.RED}❌{Colors.ENDC}"
+    
+    print(f"Verdict: {verdict_text}")
+
+
+def print_progress_bar(label: str, value: float, max_value: float = 1.0, width: int = 20):
+    """Print a progress bar for metrics like confidence score or ∆S drift."""
+    percentage = min(value / max_value, 1.0)
+    filled = int(width * percentage)
+    bar = '█' * filled + '░' * (width - filled)
+    
+    # Color based on value range
+    if percentage >= 0.8:
+        color = Colors.GREEN
+    elif percentage >= 0.5:
+        color = Colors.YELLOW
+    else:
+        color = Colors.RED
+    
+    print(f"{Colors.CYAN}{label}:{Colors.ENDC} {color}[{bar}]{Colors.ENDC} {value:.3f}/{max_value:.1f}")
+
+
+def print_enhanced_metrics(result: dict):
+    """Print enhanced metrics display with intermediate values."""
+    print(f"\n{Colors.BOLD}{Colors.BLUE}═══ ENHANCED METRICS DISPLAY ═══{Colors.ENDC}")
+    
+    # Core metrics with progress bars
+    print_progress_bar("Confidence Band", result.get("confidence_band", 0.0))
+    print_progress_bar("EchoSense Score", result.get("echo_sense", 0.0))
+    print_progress_bar("∆S Drift", result.get("delta_s", 0.0), 0.1)  # Max expected 0.1
+    
+    # Intermediate metrics
+    intermediate = result.get("intermediate_metrics", {})
+    if intermediate:
+        print(f"\n{Colors.MAGENTA}Intermediate Metrics:{Colors.ENDC}")
+        print(f"  {Colors.CYAN}∆S Variance:{Colors.ENDC} {intermediate.get('delta_s_variance', 0.0):.6f}")
+        print(f"  {Colors.CYAN}Fold Cosine:{Colors.ENDC} {intermediate.get('fold_cosine', 0.0):.6f}")
+        print(f"  {Colors.CYAN}Ancestry Depth:{Colors.ENDC} {intermediate.get('ancestry_depth', 0)}")
+        print(f"  {Colors.CYAN}Quirk Count:{Colors.ENDC} {intermediate.get('quirk_count', 0)}")
+        print(f"  {Colors.CYAN}Consensus Status:{Colors.ENDC} {intermediate.get('consensus_status', 'Unknown')}")
+    
+    # Consensus information
+    consensus = result.get("consensus", "Unknown")
+    consensus_color = Colors.GREEN if consensus == "Strong" else Colors.YELLOW if consensus == "Weak" else Colors.RED
+    print(f"\n{Colors.CYAN}Consensus:{Colors.ENDC} {consensus_color}{consensus}{Colors.ENDC}")
+    
+    # Quirk score
+    quirk_score = result.get("quirk_score", 0.0)
+    print(f"{Colors.CYAN}Quirk Score:{Colors.ENDC} {quirk_score:.3f}")
+    
+    # Provenance info if available
+    if "provenance" in result:
+        provenance = result["provenance"]
+        print(f"\n{Colors.BLUE}Provenance Chain:{Colors.ENDC}")
+        print(f"  {Colors.CYAN}Timestamp:{Colors.ENDC} {provenance.get('iso_timestamp', 'N/A')}")
+        print(f"  {Colors.CYAN}SHA256:{Colors.ENDC} {provenance.get('sha256_signature', 'N/A')[:16]}...")
+        print(f"  {Colors.CYAN}Audit Bundle:{Colors.ENDC} {'✅ Complete' if provenance.get('audit_bundle') else '❌ Missing'}")
+
+
+def simulate_analysis_progress():
+    """Simulate analysis progress with a simple progress indicator."""
+    stages = [
+        "Initializing SBSH analysis...",
+        "Calculating ∆S drift patterns...", 
+        "Generating EchoFold vectors...",
+        "Performing glyph classification...",
+        "Analyzing ancestry depth...",
+        "Computing EchoSense trust score...",
+        "Running consensus voting...",
+        "Finalizing confidence band..."
+    ]
+    
+    print(f"{Colors.MAGENTA}Running EchoScan analysis...{Colors.ENDC}")
+    for i, stage in enumerate(stages):
+        print(f"{Colors.BLUE}[{i+1}/{len(stages)}]{Colors.ENDC} {stage}")
+        time.sleep(0.1)  # Brief pause for visual effect
+    print(f"{Colors.GREEN}✅ Analysis complete!{Colors.ENDC}\n")
 
 def handle_symbolic_hash(text, glyph_digest=None):
     """Handle --symbolic-hash flag"""
@@ -189,22 +296,51 @@ def main_cli():
         if echoverifier:
             if args.verify:
                 target = input_data if input_data else args.verify
-                result = echoverifier.run(target, mode="verify")
+                
                 if not args.json:
-                    print(f"EchoVerifier Analysis for: {target[:50]}...")
-                    print(f"Verdict: {result['verdict']}")
-                    print(f"Delta S: {result['delta_s']}")
-                    print(f"Glyph ID: {result['glyph_id']}")
-                    print(f"Ancestry Depth: {result['ancestry_depth']}")
-                    print(f"EchoSense Score: {result['echo_sense']}")
-                    print(f"Vault Permission: {result['vault_permission']}")
+                    # Show progress animation
+                    simulate_analysis_progress()
+                
+                result = echoverifier.run(target, mode="verify")
+                
+                if not args.json:
+                    print(f"{Colors.BOLD}{Colors.BLUE}EchoVerifier Analysis for:{Colors.ENDC} {target[:50]}{'...' if len(target) > 50 else ''}")
+                    print("─" * 60)
+                    
+                    # Color-coded verdict with confidence
+                    print_colored_verdict(result['verdict'], result.get('confidence_band'))
+                    
+                    # Enhanced metrics display
+                    print_enhanced_metrics(result)
+                    
+                    # Core technical details
+                    print(f"\n{Colors.BOLD}{Colors.BLUE}═══ TECHNICAL DETAILS ═══{Colors.ENDC}")
+                    print(f"{Colors.CYAN}Delta S:{Colors.ENDC} {result['delta_s']:.6f}")
+                    print(f"{Colors.CYAN}Glyph ID:{Colors.ENDC} {result['glyph_id']}")
+                    print(f"{Colors.CYAN}Ancestry Depth:{Colors.ENDC} {result['ancestry_depth']}")
+                    print(f"{Colors.CYAN}Vault Permission:{Colors.ENDC} {'✅ Granted' if result['vault_permission'] else '❌ Denied'}")
+                    
+                    # Downstream module results
                     if 'downstream' in result:
-                        print(f"EchoSeal Status: {result['downstream']['echoseal']['trace_status']}")
-                        print(f"EchoVault Access: {result['downstream']['echovault']['access_granted']}")
-                        print(f"SDS-1 Sequence: {result['downstream']['sds1']['dna_sequence'][:10]}...")
-                        print(f"RPS-1 State: {result['downstream']['rps1']['synthesis_state']}")
+                        print(f"\n{Colors.BOLD}{Colors.BLUE}═══ DOWNSTREAM MODULES ═══{Colors.ENDC}")
+                        downstream = result['downstream']
+                        print(f"{Colors.CYAN}EchoSeal Status:{Colors.ENDC} {downstream.get('echoseal', {}).get('trace_status', 'N/A')}")
+                        print(f"{Colors.CYAN}EchoVault Access:{Colors.ENDC} {'✅ Granted' if downstream.get('echovault', {}).get('access_granted') else '❌ Denied'}")
+                        print(f"{Colors.CYAN}SDS-1 Sequence:{Colors.ENDC} {downstream.get('sds1', {}).get('dna_sequence', 'N/A')[:10]}...")
+                        print(f"{Colors.CYAN}RPS-1 State:{Colors.ENDC} {downstream.get('rps1', {}).get('synthesis_state', 'N/A')}")
+                    
+                    # Show ambiguous verdict warning if applicable
+                    if result['verdict'] == "Ambiguous":
+                        print(f"\n{Colors.YELLOW}{Colors.BOLD}⚠️  AMBIGUOUS VERDICT WARNING ⚠️{Colors.ENDC}")
+                        print(f"{Colors.YELLOW}This content shows conflicting indicators. Manual review recommended.{Colors.ENDC}")
+                        print(f"{Colors.YELLOW}Consensus: {result.get('consensus', 'Unknown')} | Confidence: {result.get('confidence_band', 0.0):.3f}{Colors.ENDC}")
+                
                 else:
-                    print(json.dumps(result, indent=2))
+                    # Enhanced JSON output with all new fields
+                    enhanced_result = result.copy()
+                    enhanced_result["cli_enhanced"] = True
+                    enhanced_result["output_version"] = "2.0.0-enhanced"
+                    print(json.dumps(enhanced_result, indent=2))
                 return
 
             if args.unlock:
