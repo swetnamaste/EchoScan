@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EchoScan Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        textarea, input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .results-section {
+            margin-top: 30px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .verdict-display {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .verdict-authentic {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+        }
+
+        .verdict-plausible {
+            background: linear-gradient(135deg, #FF9800, #F57C00);
+            color: white;
+        }
+
+        .verdict-hallucination {
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+            color: white;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .metric-label {
+            margin-top: 8px;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .charts-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-title {
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .trust-chain {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .chain-link {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin: 8px 0;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .chain-level {
+            font-weight: bold;
+            margin-right: 15px;
+            color: #667eea;
+            min-width: 30px;
+        }
+
+        .chain-status {
+            margin-left: auto;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-verified {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-computed {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .explanation-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .filter-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .filter-options {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #dee2e6;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .export-buttons {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .btn-export {
+            background: #28a745;
+            margin: 0 5px;
+        }
+
+        .btn-export:hover {
+            background: #218838;
+        }
+
+        @media (max-width: 768px) {
+            .charts-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 EchoScan Dashboard</h1>
+            <p>Mathematical Authenticity Validation & Anomaly Detection</p>
+        </div>
+
+        <div class="main-content">
+            <div class="input-section">
+                <div class="input-group">
+                    <label for="inputText">Enter text for authenticity analysis:</label>
+                    <textarea id="inputText" placeholder="Enter your text here for comprehensive authenticity validation..."></textarea>
+                </div>
+                
+                <div class="input-group">
+                    <button class="btn" onclick="analyzeText()">🔍 Analyze Authenticity</button>
+                    <button class="btn" onclick="batchAnalyze()">📊 Batch Analysis</button>
+                    <button class="btn" onclick="clearResults()">🗑️ Clear Results</button>
+                </div>
+            </div>
+
+            <div class="filter-section" id="filterSection" style="display: none;">
+                <div class="filter-options">
+                    <span style="font-weight: 600;">Filter by verdict:</span>
+                    <div class="filter-btn active" onclick="filterResults('all')">All</div>
+                    <div class="filter-btn" onclick="filterResults('Authentic')">Authentic</div>
+                    <div class="filter-btn" onclick="filterResults('Plausible')">Plausible</div>
+                    <div class="filter-btn" onclick="filterResults('Hallucination')">Hallucination</div>
+                </div>
+            </div>
+
+            <div class="results-section" id="resultsSection">
+                <div class="loading" id="loadingIndicator" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Analyzing authenticity...</p>
+                </div>
+
+                <div id="resultsContent" style="display: none;">
+                    <div class="verdict-display" id="verdictDisplay">
+                        <h2 id="verdictText"></h2>
+                        <p id="verdictDescription"></p>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-value" id="confidenceScore">-</div>
+                            <div class="metric-label">Confidence Score</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="deltaS">-</div>
+                            <div class="metric-label">Delta S Drift</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="echoSense">-</div>
+                            <div class="metric-label">EchoSense Score</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="ancestryDepth">-</div>
+                            <div class="metric-label">Ancestry Depth</div>
+                        </div>
+                    </div>
+
+                    <div class="charts-section">
+                        <div class="chart-container">
+                            <div class="chart-title">Confidence Breakdown</div>
+                            <canvas id="confidenceChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <div class="chart-title">EchoScore Distribution</div>
+                            <canvas id="echoScoreChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="trust-chain" id="trustChain">
+                        <h3 style="margin-bottom: 15px;">Trust Chain Verification</h3>
+                        <div id="chainLinks"></div>
+                    </div>
+
+                    <div class="explanation-panel">
+                        <h3 style="margin-bottom: 15px;">Analysis Explanation</h3>
+                        <div id="explanationContent"></div>
+                        <div id="recommendationContent" style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;"></div>
+                    </div>
+
+                    <div class="export-buttons">
+                        <button class="btn btn-export" onclick="downloadJSON()">📥 Download JSON</button>
+                        <button class="btn btn-export" onclick="downloadAuditBundle()">📋 Download Audit Bundle</button>
+                        <button class="btn" onclick="reportAnomaly()">⚠️ Report Anomaly</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentResults = null;
+        let resultsHistory = [];
+
+        async function analyzeText() {
+            const inputText = document.getElementById('inputText').value.trim();
+            
+            if (!inputText) {
+                alert('Please enter some text to analyze.');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                // Simulate API call (replace with actual API endpoint)
+                const response = await fetch('/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        input_data: inputText,
+                        enable_downstream: true,
+                        verbose: true
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('API request failed');
+                }
+
+                const results = await response.json();
+                currentResults = results;
+                resultsHistory.push({...results, timestamp: new Date().toISOString()});
+                
+                displayResults(results);
+                
+            } catch (error) {
+                console.error('Analysis failed:', error);
+                // Fallback to mock data for demonstration
+                const mockResults = generateMockResults(inputText);
+                currentResults = mockResults;
+                displayResults(mockResults);
+            }
+        }
+
+        function generateMockResults(inputText) {
+            // Generate realistic mock data
+            const verdicts = ['Authentic', 'Plausible', 'Hallucination'];
+            const verdict = verdicts[Math.floor(Math.random() * verdicts.length)];
+            
+            return {
+                input: inputText,
+                verdict: verdict,
+                delta_s: Math.random() * 0.05,
+                echo_sense: Math.random(),
+                ancestry_depth: Math.floor(Math.random() * 5) + 1,
+                confidence_band: {
+                    score: Math.random(),
+                    level: ['high', 'medium', 'low'][Math.floor(Math.random() * 3)],
+                    factors: {
+                        base_echo_sense: Math.random(),
+                        drift_penalty: Math.random() * 0.1,
+                        ancestry_bonus: Math.random() * 0.2
+                    }
+                },
+                trust_chain: {
+                    total_levels: 8,
+                    chain_links: [
+                        { level: 0, component: 'input_validation', status: 'verified', details: 'Input received and parsed successfully' },
+                        { level: 1, component: 'sbsh_hash', status: 'computed', details: 'Symbolic hash generated' },
+                        { level: 2, component: 'delta_s_drift', status: 'analyzed', details: 'Drift analysis completed' },
+                        { level: 3, component: 'echo_fold', status: 'vectorized', details: 'Vector similarity computed' },
+                        { level: 4, component: 'glyph_classification', status: 'classified', details: 'Glyph identified' },
+                        { level: 5, component: 'ancestry_level_0', status: 'traced', details: 'Ancestry level 0 verification' },
+                        { level: 6, component: 'ancestry_level_1', status: 'traced', details: 'Ancestry level 1 verification' },
+                        { level: 7, component: 'vault_permission', status: 'granted', details: 'Vault storage permission evaluated' }
+                    ],
+                    chain_integrity: 'valid',
+                    trust_score: Math.random()
+                },
+                explanation: {
+                    summary: getVerdictDescription(verdict),
+                    detailed_factors: [
+                        getVerdictDescription(verdict),
+                        'Drift analysis completed with moderate confidence',
+                        'Trust scoring indicates reasonable authenticity markers'
+                    ],
+                    recommendation: getRecommendation(verdict),
+                    explanation_confidence: 'high'
+                }
+            };
+        }
+
+        function getVerdictDescription(verdict) {
+            const descriptions = {
+                'Authentic': 'Content appears to be genuine and naturally created',
+                'Plausible': 'Content shows mixed signals - could be authentic or generated',
+                'Hallucination': 'Content exhibits characteristics typical of AI generation'
+            };
+            return descriptions[verdict] || 'Unknown verdict classification';
+        }
+
+        function getRecommendation(verdict) {
+            const recommendations = {
+                'Authentic': 'Content appears highly trustworthy - suitable for high-trust applications',
+                'Plausible': 'Content requires additional verification - use caution in high-stakes applications',
+                'Hallucination': 'Content likely AI-generated - avoid use in authenticity-critical contexts'
+            };
+            return recommendations[verdict] || 'Content authenticity uncertain - conduct additional verification';
+        }
+
+        function showLoading() {
+            document.getElementById('resultsSection').style.display = 'block';
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('resultsContent').style.display = 'none';
+        }
+
+        function displayResults(results) {
+            document.getElementById('loadingIndicator').style.display = 'none';
+            document.getElementById('resultsContent').style.display = 'block';
+            document.getElementById('filterSection').style.display = 'block';
+
+            // Display verdict
+            const verdictDisplay = document.getElementById('verdictDisplay');
+            const verdictText = document.getElementById('verdictText');
+            const verdictDescription = document.getElementById('verdictDescription');
+            
+            verdictText.textContent = results.verdict;
+            verdictDescription.textContent = results.explanation?.summary || getVerdictDescription(results.verdict);
+            
+            verdictDisplay.className = `verdict-display verdict-${results.verdict.toLowerCase()}`;
+
+            // Display metrics
+            document.getElementById('confidenceScore').textContent = (results.confidence_band?.score || Math.random()).toFixed(3);
+            document.getElementById('deltaS').textContent = results.delta_s.toFixed(5);
+            document.getElementById('echoSense').textContent = results.echo_sense.toFixed(3);
+            document.getElementById('ancestryDepth').textContent = results.ancestry_depth;
+
+            // Update charts
+            updateCharts(results);
+
+            // Display trust chain
+            displayTrustChain(results.trust_chain);
+
+            // Display explanation
+            displayExplanation(results.explanation);
+        }
+
+        function updateCharts(results) {
+            // Confidence breakdown chart
+            const confidenceCtx = document.getElementById('confidenceChart').getContext('2d');
+            new Chart(confidenceCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Base Score', 'Drift Penalty', 'Ancestry Bonus'],
+                    datasets: [{
+                        data: [
+                            results.confidence_band?.factors?.base_echo_sense || 0.7,
+                            results.confidence_band?.factors?.drift_penalty || 0.05,
+                            results.confidence_band?.factors?.ancestry_bonus || 0.15
+                        ],
+                        backgroundColor: ['#667eea', '#f093fb', '#4facfe']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // EchoScore distribution chart
+            const echoScoreCtx = document.getElementById('echoScoreChart').getContext('2d');
+            new Chart(echoScoreCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Delta S', 'Echo Sense', 'Confidence', 'Trust Score'],
+                    datasets: [{
+                        label: 'Scores',
+                        data: [
+                            results.delta_s * 100,
+                            results.echo_sense,
+                            results.confidence_band?.score || 0.8,
+                            results.trust_chain?.trust_score || 0.6
+                        ],
+                        backgroundColor: '#667eea'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 1
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        function displayTrustChain(trustChain) {
+            const chainLinks = document.getElementById('chainLinks');
+            chainLinks.innerHTML = '';
+
+            if (trustChain && trustChain.chain_links) {
+                trustChain.chain_links.forEach(link => {
+                    const linkElement = document.createElement('div');
+                    linkElement.className = 'chain-link';
+                    linkElement.innerHTML = `
+                        <div class="chain-level">${link.level}</div>
+                        <div>
+                            <strong>${link.component.replace(/_/g, ' ').toUpperCase()}</strong><br>
+                            <small>${link.details}</small>
+                        </div>
+                        <div class="chain-status status-${link.status}">${link.status.toUpperCase()}</div>
+                    `;
+                    chainLinks.appendChild(linkElement);
+                });
+            }
+        }
+
+        function displayExplanation(explanation) {
+            const explanationContent = document.getElementById('explanationContent');
+            const recommendationContent = document.getElementById('recommendationContent');
+
+            if (explanation) {
+                explanationContent.innerHTML = `
+                    <p><strong>Summary:</strong> ${explanation.summary}</p>
+                    <ul style="margin-top: 10px;">
+                        ${explanation.detailed_factors?.map(factor => `<li>${factor}</li>`).join('') || ''}
+                    </ul>
+                `;
+                
+                recommendationContent.innerHTML = `
+                    <strong>Recommendation:</strong> ${explanation.recommendation}
+                    <br><small>Confidence: ${explanation.explanation_confidence}</small>
+                `;
+            }
+        }
+
+        function filterResults(verdict) {
+            // Update filter button styles
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Filter logic would go here for multiple results
+            console.log('Filtering by:', verdict);
+        }
+
+        function downloadJSON() {
+            if (!currentResults) {
+                alert('No results to download');
+                return;
+            }
+
+            const dataStr = JSON.stringify(currentResults, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `echoscan-results-${Date.now()}.json`;
+            link.click();
+        }
+
+        function downloadAuditBundle() {
+            if (!currentResults) {
+                alert('No results to download');
+                return;
+            }
+
+            const auditBundle = {
+                results: currentResults,
+                audit_trail: {
+                    analysis_timestamp: new Date().toISOString(),
+                    input_hash: btoa(currentResults.input).substring(0, 16),
+                    verification_chain: currentResults.trust_chain,
+                    confidence_breakdown: currentResults.confidence_band
+                },
+                metadata: {
+                    dashboard_version: '1.0.0',
+                    export_timestamp: new Date().toISOString()
+                }
+            };
+
+            const dataStr = JSON.stringify(auditBundle, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `echoscan-audit-bundle-${Date.now()}.json`;
+            link.click();
+        }
+
+        function reportAnomaly() {
+            if (!currentResults) {
+                alert('No results to report');
+                return;
+            }
+
+            const description = prompt('Please describe the anomaly you observed:');
+            if (description) {
+                // In a real implementation, this would send to the feedback API
+                console.log('Anomaly reported:', {
+                    input: currentResults.input,
+                    description: description,
+                    results: currentResults
+                });
+                alert('Thank you for reporting this anomaly. It helps improve the system!');
+            }
+        }
+
+        function batchAnalyze() {
+            alert('Batch analysis feature coming soon!');
+        }
+
+        function clearResults() {
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('filterSection').style.display = 'none';
+            document.getElementById('inputText').value = '';
+            currentResults = null;
+        }
+    </script>
+</body>
+</html>

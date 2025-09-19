@@ -6,10 +6,20 @@ Handles edge case logging, anomaly detection, and performance monitoring.
 import os
 import json
 import time
+import asyncio
 import logging
 from datetime import datetime
 from typing import Dict, Any, Optional
 from functools import wraps
+
+# Import webhook integration
+try:
+    from webhook_integration import notify_anomaly_sync
+    WEBHOOK_ENABLED = True
+except ImportError:
+    WEBHOOK_ENABLED = False
+    def notify_anomaly_sync(*args, **kwargs):
+        return {"status": "disabled", "message": "Webhook integration not available"}
 
 
 class EdgeCaseMonitor:
@@ -106,6 +116,15 @@ class EdgeCaseMonitor:
         })}")
         
         print(f"⚠️  Input quarantined: {filepath}")
+        
+        # Send webhook notification if enabled
+        if WEBHOOK_ENABLED:
+            try:
+                webhook_result = notify_anomaly_sync(reason, input_data, metadata)
+                if webhook_result.get("status") == "success":
+                    print("📡 Webhook notification sent successfully")
+            except Exception as e:
+                print(f"⚠️  Webhook notification failed: {e}")
 
 
 class PerformanceMonitor:
@@ -128,17 +147,30 @@ class PerformanceMonitor:
     def monitor_request(self, operation_name: str = "unknown"):
         """Decorator to monitor request performance."""
         def decorator(func):
-            @wraps(func)
-            def wrapper(*args, **kwargs):
-                start_time = time.time()
-                result = func(*args, **kwargs)
-                end_time = time.time()
-                
-                latency = end_time - start_time
-                self.log_performance(operation_name, latency, args, kwargs)
-                
-                return result
-            return wrapper
+            if asyncio.iscoroutinefunction(func):
+                @wraps(func)
+                async def async_wrapper(*args, **kwargs):
+                    start_time = time.time()
+                    result = await func(*args, **kwargs)
+                    end_time = time.time()
+                    
+                    latency = end_time - start_time
+                    self.log_performance(operation_name, latency, args, kwargs)
+                    
+                    return result
+                return async_wrapper
+            else:
+                @wraps(func)
+                def sync_wrapper(*args, **kwargs):
+                    start_time = time.time()
+                    result = func(*args, **kwargs)
+                    end_time = time.time()
+                    
+                    latency = end_time - start_time
+                    self.log_performance(operation_name, latency, args, kwargs)
+                    
+                    return result
+                return sync_wrapper
         return decorator
     
     def log_performance(self, operation: str, latency: float, args: tuple, kwargs: dict):
