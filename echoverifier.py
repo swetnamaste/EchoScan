@@ -10,6 +10,14 @@ from detectors import sbsm, delta_s, glyph
 from vault.vault import vault
 import downstream_hooks
 
+# Import our configuration manager and error reporter
+try:
+    from config_hot_reload import config_manager
+    from error_report import error_reporter
+except ImportError:
+    config_manager = None
+    error_reporter = None
+
 
 class EchoFold:
     """EchoFold vector operations for cosine similarity."""
@@ -98,6 +106,30 @@ class EchoSense:
     ) -> float:
         """Calculate EchoSense trust score with mathematical validation."""
         
+        # Get configurable weights
+        try:
+            if config_manager:
+                weights = config_manager.get_echosense_weights()
+            else:
+                # Fallback to default weights
+                weights = {
+                    "delta_component": 0.3,
+                    "fold_component": 0.3,
+                    "glyph_component": 0.2,
+                    "ancestry_component": 0.2
+                }
+        except Exception as e:
+            if error_reporter:
+                error_reporter.log_config_error(
+                    f"Failed to get EchoSense weights, using defaults: {str(e)}"
+                )
+            weights = {
+                "delta_component": 0.3,
+                "fold_component": 0.3,
+                "glyph_component": 0.2,
+                "ancestry_component": 0.2
+            }
+        
         # Delta S component (lower drift = higher trust)
         delta_component = max(0, 1 - (delta_s * 10))
         
@@ -115,12 +147,12 @@ class EchoSense:
         else:
             ancestry_component = max(0.3, 1.0 - ((ancestry_depth - 7) * 0.1))
         
-        # Weighted combination
+        # Weighted combination using configurable weights
         score = (
-            delta_component * 0.3 +
-            fold_component * 0.3 +
-            glyph_component * 0.2 +
-            ancestry_component * 0.2
+            delta_component * weights["delta_component"] +
+            fold_component * weights["fold_component"] +
+            glyph_component * weights["glyph_component"] +
+            ancestry_component * weights["ancestry_component"]
         )
         
         return round(min(max(score, 0.0), 1.0), 6)
@@ -211,7 +243,23 @@ class EchoVerifier:
     
     def _check_vault_permission(self, echo_sense_score: float, ancestry_depth: int) -> bool:
         """Check if result qualifies for vault storage."""
-        return echo_sense_score > 0.5 and ancestry_depth >= 2
+        try:
+            if config_manager:
+                vault_config = config_manager.get_vault_access_config()
+                min_echo_sense = vault_config.get("min_echo_sense", 0.7)
+                min_ancestry_depth = vault_config.get("min_ancestry_depth", 2)
+            else:
+                min_echo_sense = 0.7
+                min_ancestry_depth = 2
+                
+            return echo_sense_score >= min_echo_sense and ancestry_depth >= min_ancestry_depth
+        except Exception as e:
+            if error_reporter:
+                error_reporter.log_config_error(
+                    f"Failed to get vault config, using defaults: {str(e)}"
+                )
+            # Fallback to safe defaults
+            return echo_sense_score >= 0.7 and ancestry_depth >= 2
     
     def _determine_verdict(
         self, 

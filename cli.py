@@ -265,7 +265,7 @@ def main_cli():
             if not args.json:
                 print("Full Pipeline Results:")
                 print(f"Echo Score: {result['EchoScore']}")
-                print(f"Decision: {result['Decision Label']}")
+                print(f"Decision: {result['Decision']}")
                 if 'echoverifier' in result.get('FullResults', {}):
                     ev_result = result['FullResults']['echoverifier']
                     print(f"EchoVerifier Verdict: {ev_result['verdict']}")
