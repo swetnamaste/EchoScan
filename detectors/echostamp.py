@@ -1,4 +1,4 @@
-"""echostamp detector module stub"""
+"""EchoStamp Detector Module"""
 
 def run(*args, **kwargs):
     """Stub implementation for echostamp detector"""
