@@ -105,6 +105,10 @@ Examples:
   python cli.py --ancestry "Some text"
   python cli.py --export-verifier "Some text"
   python cli.py --full-scan filename.txt
+  python cli.py --status
+  python cli.py --quarantine-stats
+  python cli.py --recent-anomalies 20
+  python cli.py --export-logs "anomaly_export.json" --log-type edge_cases --time-window 48
 Integration hooks available: TraceView, EchoVault, CollapseGlyph, EchoCradle, EchoSense, PulseAdapt
         """
     )
@@ -128,6 +132,18 @@ Integration hooks available: TraceView, EchoVault, CollapseGlyph, EchoCradle, Ec
     parser.add_argument('--unlock', type=str, help='Run EchoLock unlock procedure')
     parser.add_argument('--ancestry', type=str, help='Perform ancestry depth analysis')
     parser.add_argument('--export-verifier', type=str, help='Export verifier data in structured format')
+    
+    # Monitoring and hardening flags
+    parser.add_argument('--status', action='store_true', help='Show system status and statistics')
+    parser.add_argument('--quarantine-stats', action='store_true', help='Show quarantine statistics')
+    parser.add_argument('--performance-stats', action='store_true', help='Show performance statistics')
+    parser.add_argument('--vault-stats', action='store_true', help='Show vault statistics')
+    parser.add_argument('--recent-anomalies', type=int, metavar='N', help='Show N recent anomalies (default: 10)')
+    parser.add_argument('--export-logs', type=str, metavar='FILENAME', help='Export logs to file')
+    parser.add_argument('--log-type', choices=['edge_cases', 'field_test', 'performance', 'all'], 
+                       default='all', help='Type of logs to export')
+    parser.add_argument('--time-window', type=int, default=24, help='Time window in hours for stats/logs')
+    
     # Additional options
     parser.add_argument('--input-file', type=str, help='Read input from file')
     parser.add_argument('--output-file', type=str, help='Write output to file')
@@ -183,6 +199,63 @@ def main_cli():
         if args.sbsh_chain_link:
             result = handle_sbsh_chain_link(args.sbsh_chain_link, args.previous_hash)
             print(json.dumps(result, indent=2))
+            return
+
+        # Monitoring and hardening flags
+        if args.status:
+            from quarantine_manager import quarantine_manager
+            from performance_monitor import performance_monitor
+            from continuous_logger import continuous_logger
+            from vault.vault import vault
+            
+            print("=== EchoScan System Status ===")
+            print(f"Performance Stats: {json.dumps(performance_monitor.get_statistics(), indent=2)}")
+            print(f"Quarantine Stats: {json.dumps(quarantine_manager.get_quarantine_stats(), indent=2)}")
+            print(f"Vault Stats: {json.dumps(vault.get_vault_stats(), indent=2)}")
+            print(f"Logger Stats: {json.dumps(continuous_logger.get_statistics(), indent=2)}")
+            return
+            
+        if args.quarantine_stats:
+            from quarantine_manager import quarantine_manager
+            stats = quarantine_manager.get_quarantine_stats()
+            print("=== Quarantine Statistics ===")
+            print(json.dumps(stats, indent=2))
+            return
+            
+        if args.performance_stats:
+            from performance_monitor import performance_monitor
+            stats = performance_monitor.get_statistics()
+            print("=== Performance Statistics ===")
+            print(json.dumps(stats, indent=2))
+            return
+            
+        if args.vault_stats:
+            from vault.vault import vault
+            stats = vault.get_vault_stats()
+            print("=== Vault Statistics ===")
+            print(json.dumps(stats, indent=2))
+            return
+            
+        if args.recent_anomalies is not None:
+            from continuous_logger import continuous_logger
+            limit = args.recent_anomalies if args.recent_anomalies > 0 else 10
+            anomalies = continuous_logger.get_recent_anomalies(limit)
+            print(f"=== Recent {limit} Anomalies ===")
+            print(json.dumps(anomalies, indent=2))
+            return
+            
+        if args.export_logs:
+            from continuous_logger import continuous_logger
+            success = continuous_logger.export_logs(
+                output_file=args.export_logs,
+                log_type=args.log_type,
+                hours=args.time_window
+            )
+            if success:
+                print(f"Logs exported successfully to {args.export_logs}")
+            else:
+                print(f"Failed to export logs to {args.export_logs}")
+                sys.exit(1)
             return
 
         # EchoVerifier flags

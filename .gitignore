@@ -137,3 +137,11 @@ test_input.txt
 *.tmp
 *.temp
 *.bak
+
+# EchoScan specific files
+/logs/
+/quarantine/
+/vault_backup/
+/emergency_backup/
+/exports/
+*.log
