@@ -90,22 +90,139 @@ def compute_echo_score(results):
     return round(score, 2)
 
 def compute_decision_label(results, echo_score):
-    # Placeholder: logic for label based on score and module verdicts
-    if echo_score >= 4.2:
+    """
+    Refined decision label computation based on echo_score, module verdicts, and detection patterns.
+    
+    Uses multi-tier analysis combining:
+    - Echo score thresholds
+    - Module source classifications
+    - EchoVerifier verdict integration
+    - Anomaly detection patterns
+    """
+    # Collect module classifications for analysis
+    ai_generated_modules = []
+    questionable_modules = []
+    human_generated_modules = []
+    
+    for module_name, module_result in results.items():
+        if isinstance(module_result, dict):
+            source_class = module_result.get("source_classification")
+            if source_class == "AI-Generated":
+                ai_generated_modules.append(module_name)
+            elif source_class == "Questionable":
+                questionable_modules.append(module_name)
+            elif source_class == "Human-Generated":
+                human_generated_modules.append(module_name)
+    
+    # Integrate EchoVerifier verdict if available
+    echoverifier_verdict = None
+    if "echoverifier" in results and isinstance(results["echoverifier"], dict):
+        echoverifier_verdict = results["echoverifier"].get("verdict")
+    
+    # Enhanced decision logic with multi-factor analysis
+    # High confidence Real (stringent criteria)
+    if (echo_score >= 4.2 and 
+        len(ai_generated_modules) == 0 and 
+        len(human_generated_modules) >= 2 and
+        echoverifier_verdict in ["Authentic", None]):  # None means no contradictory evidence
         return "Real"
-    elif echo_score >= 3.4:
+    
+    # High confidence Synthetic (clear synthetic indicators)
+    elif (echo_score <= 1.5 or 
+          len(ai_generated_modules) >= 2 or
+          echoverifier_verdict == "Hallucination"):
+        if len(ai_generated_modules) >= 2:
+            return "Synthetic"
+        else:
+            return "Synthetic (Obfuscated or Obvious)"
+    
+    # Edited-Real (modified authentic content)
+    elif (3.4 <= echo_score < 4.2 and
+          len(ai_generated_modules) <= 1 and
+          len(questionable_modules) <= 2 and
+          echoverifier_verdict in ["Plausible", "Authentic", None]):
         return "Edited-Real"
-    elif echo_score >= 2.2:
+    
+    # Borderline (uncertain classification)
+    elif (2.2 <= echo_score < 3.4 or
+          len(questionable_modules) >= 2 or
+          echoverifier_verdict == "Plausible"):
         return "Borderline"
+    
+    # Default to Synthetic for remaining low-score cases
     else:
-        synth_mods = [m for m in results if results[m] and isinstance(results[m], dict) and results[m].get("source_classification")=="AI-Generated"]
-        return "Synthetic" if synth_mods else "Synthetic (Obfuscated or Obvious)"
+        return "Synthetic" if ai_generated_modules else "Synthetic (Obfuscated or Obvious)"
 
 def compute_advisory_flags(results):
-    # Placeholder: collect flags from modules
-    flags = []
-    for mod in results:
-        mod_res = results[mod]
-        if isinstance(mod_res, dict) and "advisory_flag" in mod_res:
-            flags.append(mod_res["advisory_flag"])
-    return flags
+    """
+    Refined advisory flag computation with comprehensive flag collection and categorization.
+    
+    Collects and categorizes flags from all modules into:
+    - Critical flags (require immediate attention)
+    - Warning flags (suspicious patterns)
+    - Info flags (general observations)
+    """
+    critical_flags = []
+    warning_flags = []
+    info_flags = []
+    
+    for module_name, module_result in results.items():
+        if isinstance(module_result, dict):
+            # Direct advisory flags from modules
+            if "advisory_flag" in module_result:
+                flag = module_result["advisory_flag"]
+                # Categorize flags based on content
+                if any(keyword in flag.lower() for keyword in ["synthetic", "extreme", "suspicious", "anomaly"]):
+                    critical_flags.append(flag)
+                elif any(keyword in flag.lower() for keyword in ["borderline", "elevated", "questionable"]):
+                    warning_flags.append(flag)
+                else:
+                    info_flags.append(flag)
+            
+            # Generate flags based on module results
+            source_class = module_result.get("source_classification")
+            if source_class == "AI-Generated":
+                critical_flags.append(f"{module_name.upper()}: AI-generated content detected")
+            elif source_class == "Questionable":
+                warning_flags.append(f"{module_name.upper()}: Content authenticity questioned")
+            
+            # Check for significant penalties or modifiers
+            penalty = module_result.get("echo_score_penalty", 0)
+            modifier = module_result.get("echo_score_modifier", 0)
+            
+            if penalty <= -10:
+                critical_flags.append(f"{module_name.upper()}: Severe authenticity penalty applied")
+            elif penalty <= -5:
+                warning_flags.append(f"{module_name.upper()}: Moderate authenticity penalty applied")
+            elif modifier >= 5:
+                info_flags.append(f"{module_name.upper()}: Authenticity bonus applied")
+    
+    # Special handling for EchoVerifier results
+    if "echoverifier" in results:
+        ev_result = results["echoverifier"]
+        if isinstance(ev_result, dict):
+            verdict = ev_result.get("verdict")
+            if verdict == "Hallucination":
+                critical_flags.append("ECHOVERIFIER: Hallucination detected")
+            elif verdict == "Plausible":
+                warning_flags.append("ECHOVERIFIER: Content classified as plausible")
+            elif verdict == "Authentic":
+                info_flags.append("ECHOVERIFIER: Content verified as authentic")
+            
+            # Check vault permission
+            vault_perm = ev_result.get("vault_permission", False)
+            if not vault_perm:
+                warning_flags.append("ECHOVERIFIER: Vault access denied")
+    
+    # Combine flags in priority order: Critical -> Warning -> Info
+    all_flags = critical_flags + warning_flags + info_flags
+    
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_flags = []
+    for flag in all_flags:
+        if flag not in seen:
+            unique_flags.append(flag)
+            seen.add(flag)
+    
+    return unique_flags
