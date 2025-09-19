@@ -133,6 +133,7 @@ Integration hooks available: TraceView, EchoVault, CollapseGlyph, EchoCradle, Ec
     parser.add_argument('--output-file', type=str, help='Write output to file')
     parser.add_argument('--json', action='store_true', help='Output results in JSON format')
     parser.add_argument('--pipeline', action='store_true', help='Run full detection pipeline')
+    parser.add_argument('--dry-run', action='store_true', help='Perform validation without full processing (test mode)')
 
     return parser
 
@@ -261,14 +262,41 @@ def main_cli():
 
         # Full pipeline (new logic)
         if args.pipeline and input_file:
-            result = main.run_pipeline(input_file, "text")
+            result = main.run_pipeline(input_file, "text", dry_run=args.dry_run)
             if not args.json:
-                print("Full Pipeline Results:")
-                print(f"Echo Score: {result['EchoScore']}")
-                print(f"Decision: {result['Decision Label']}")
-                if 'echoverifier' in result.get('FullResults', {}):
-                    ev_result = result['FullResults']['echoverifier']
-                    print(f"EchoVerifier Verdict: {ev_result['verdict']}")
+                print("Full Pipeline Results:" + (" (DRY RUN)" if args.dry_run else ""))
+                echo_scan = result.get('EchoScan', {})
+                summary = echo_scan.get('summary', {})
+                
+                if args.dry_run:
+                    print("Mode: Validation and structure test only")
+                    execution = echo_scan.get('execution', {})
+                    print(f"Modules that would be executed: {len(execution.get('modules_executed', []))}")
+                    print(f"Input: {echo_scan.get('input', {}).get('modality', 'N/A')} ({echo_scan.get('input', {}).get('length', 0)} chars)")
+                else:
+                    print(f"Echo Score: {summary.get('echo_score', 'N/A')}")
+                    print(f"Decision: {summary.get('decision_label', 'N/A')}")
+                    
+                    # Show advisory flags summary
+                    flags = echo_scan.get('advisory_flags', {})
+                    total_flags = summary.get('total_flags', 0)
+                    if total_flags > 0:
+                        print(f"Advisory Flags: {total_flags} total")
+                        if flags.get('critical'):
+                            print(f"  - Critical: {len(flags['critical'])}")
+                        if flags.get('warning'):
+                            print(f"  - Warning: {len(flags['warning'])}")
+                        if flags.get('info'):
+                            print(f"  - Info: {len(flags['info'])}")
+                    
+                    # Show EchoVerifier verdict if available
+                    ev_result = echo_scan.get('results', {}).get('echoverifier', {})
+                    if ev_result and 'verdict' in ev_result:
+                        print(f"EchoVerifier Verdict: {ev_result['verdict']}")
+                    
+                    # Show execution summary
+                    print(f"Modules: {summary.get('modules_successful', 0)} successful, {summary.get('modules_failed', 0)} failed")
+                
             else:
                 print(json.dumps(result, indent=2))
             return
