@@ -10,6 +10,7 @@ import json
 import sys
 import os
 from pathlib import Path
+from datetime import datetime
 
 # Add the current directory to Python path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -26,8 +27,10 @@ import main
 # EchoVerifier module import
 try:
     import echoverifier
+    import detector_registry
 except ImportError:
     echoverifier = None
+    detector_registry = None
 
 def handle_symbolic_hash(text, glyph_digest=None):
     """Handle --symbolic-hash flag"""
@@ -133,6 +136,15 @@ Integration hooks available: TraceView, EchoVault, CollapseGlyph, EchoCradle, Ec
     parser.add_argument('--output-file', type=str, help='Write output to file')
     parser.add_argument('--json', action='store_true', help='Output results in JSON format')
     parser.add_argument('--pipeline', action='store_true', help='Run full detection pipeline')
+    
+    # Enhanced UX options
+    parser.add_argument('--verbose', action='store_true', help='Enable verbose output with detailed explanations')
+    parser.add_argument('--drill', type=str, choices=['provenance', 'downstream', 'metrics', 'all'], 
+                       help='Drill down into specific aspects (provenance/downstream/metrics/all)')
+    parser.add_argument('--batch', nargs='+', help='Process multiple inputs in batch')
+    parser.add_argument('--export-audit', action='store_true', help='Export audit trail data')
+    parser.add_argument('--verify-signature', nargs=2, metavar=('DATA', 'SIGNATURE'), 
+                       help='Verify signature of data with SHA256 + timestamp')
 
     return parser
 
@@ -190,7 +202,11 @@ def main_cli():
             if args.verify:
                 target = input_data if input_data else args.verify
                 result = echoverifier.run(target, mode="verify")
-                if not args.json:
+                
+                # Enhanced verbose output
+                if args.verbose or args.drill:
+                    print_detailed_result(result, args)
+                elif not args.json:
                     print(f"EchoVerifier Analysis for: {target[:50]}...")
                     print(f"Verdict: {result['verdict']}")
                     print(f"Explanation: {result.get('explanation', 'No explanation available')}")
@@ -289,12 +305,154 @@ def main_cli():
                 f.write(str(result))
             return
 
+        # Enhanced CLI features
+        if args.batch:
+            print("🔄 Processing batch inputs...")
+            batch_results = []
+            for i, text in enumerate(args.batch, 1):
+                print(f"  Processing item {i}/{len(args.batch)}...")
+                result = echoverifier.run(text, mode="verify")
+                batch_results.append(result)
+            
+            if args.json:
+                print(json.dumps({"batch_results": batch_results, "total_count": len(batch_results)}, indent=2))
+            else:
+                print(f"\n📊 Batch Results Summary:")
+                verdicts = {}
+                total_echo_sense = 0
+                for result in batch_results:
+                    verdict = result['verdict']
+                    verdicts[verdict] = verdicts.get(verdict, 0) + 1
+                    total_echo_sense += result['echo_sense']
+                
+                print(f"Total processed: {len(batch_results)}")
+                print(f"Verdicts: {dict(verdicts)}")
+                print(f"Average EchoSense: {total_echo_sense/len(batch_results):.6f}")
+            return
+        
+        if args.verify_signature:
+            data, signature = args.verify_signature
+            print(f"🔐 Verifying signature for: {data[:50]}...")
+            
+            import hashlib
+            from datetime import datetime
+            
+            timestamp = datetime.utcnow().isoformat()
+            data_to_hash = f"{data}{timestamp}".encode('utf-8')
+            expected_signature = hashlib.sha256(data_to_hash).hexdigest()
+            
+            signature_valid = expected_signature == signature
+            
+            if not args.json:
+                print(f"Expected signature: {expected_signature}")
+                print(f"Provided signature: {signature}")
+                print(f"Signature valid: {'✅' if signature_valid else '❌'}")
+                print(f"Timestamp: {timestamp}")
+            else:
+                print(json.dumps({
+                    "signature_valid": signature_valid,
+                    "expected_signature": expected_signature,
+                    "provided_signature": signature,
+                    "timestamp": timestamp
+                }, indent=2))
+            return
+        
+        if args.export_audit:
+            print("📥 Exporting audit trail...")
+            # Generate sample audit data
+            audit_data = {
+                "export_timestamp": datetime.now().isoformat(),
+                "system_info": {
+                    "version": "1.0.0",
+                    "detectors_loaded": len(detector_registry.get_registry().detectors)
+                },
+                "sample_analysis": echoverifier.run("Audit trail sample", mode="verify")
+            }
+            
+            if args.output_file:
+                with open(args.output_file, 'w') as f:
+                    json.dump(audit_data, f, indent=2)
+                print(f"✅ Audit data exported to {args.output_file}")
+            else:
+                print(json.dumps(audit_data, indent=2))
+            return
+
         # If no specific flag provided, show help
         parser.print_help()
 
     except Exception as e:
         print(f"Error: {str(e)}", file=sys.stderr)
         sys.exit(1)
+
+
+def print_detailed_result(result: dict, args):
+    """Print detailed analysis result based on drill-down options."""
+    print("🔍 Detailed EchoVerifier Analysis")
+    print("=" * 50)
+    
+    print(f"📝 Input: {result['input']}")
+    print(f"🎯 Verdict: {result['verdict']}")
+    print(f"💬 Explanation: {result.get('explanation', 'No explanation available')}")
+    
+    if args.drill in ['metrics', 'all']:
+        print(f"\n📊 Core Metrics:")
+        print(f"  ΔS Drift: {result['delta_s']:.6f}")
+        print(f"  EchoSense Score: {result['echo_sense']:.6f}")
+        print(f"  Ancestry Depth: {result['ancestry_depth']}")
+        print(f"  Vault Permission: {'✅' if result['vault_permission'] else '❌'}")
+        print(f"  Glyph ID: {result['glyph_id']}")
+        
+        if 'fold_vector' in result:
+            print(f"  Fold Vector (first 8): {result['fold_vector'][:8]}")
+    
+    if args.drill in ['provenance', 'all']:
+        print(f"\n🌳 Provenance Chain:")
+        print(f"  1. SBSH Hash Generation")
+        print(f"  2. ΔS Drift Analysis → {result['delta_s']:.6f}")
+        print(f"  3. EchoFold Vector → Cosine Similarity")
+        print(f"  4. Glyph Classification → {result['glyph_id']}")
+        print(f"  5. Ancestry Depth → {result['ancestry_depth']}")
+        print(f"  6. EchoSense Trust Score → {result['echo_sense']:.6f}")
+        print(f"  7. Final Verdict → {result['verdict']}")
+    
+    if args.drill in ['downstream', 'all'] and 'downstream' in result:
+        print(f"\n🔗 Downstream Hooks:")
+        downstream = result['downstream']
+        
+        if 'echoseal' in downstream:
+            seal = downstream['echoseal']
+            print(f"  EchoSeal: {seal.get('trace_status', 'unknown')} (ID: {seal.get('drift_trace_id', 'N/A')})")
+        
+        if 'echoroots' in downstream:
+            roots = downstream['echoroots']
+            print(f"  EchoRoots: {roots.get('root_verification', 'unknown')} ({len(roots.get('root_chain', []))} chains)")
+        
+        if 'echovault' in downstream:
+            vault = downstream['echovault']
+            print(f"  EchoVault: {'✅' if vault.get('access_granted') else '❌'} (Level: {vault.get('storage_level', 'N/A')})")
+        
+        if 'sds1' in downstream:
+            sds1 = downstream['sds1']
+            print(f"  SDS-1 DNA: {sds1.get('sequence_integrity', 'unknown')} (Markers: {sds1.get('genetic_markers', 0)})")
+        
+        if 'rps1' in downstream:
+            rps1 = downstream['rps1']
+            print(f"  RPS-1 Paradox: {rps1.get('synthesis_state', 'unknown')} (Score: {rps1.get('paradox_score', 0):.3f})")
+        
+        if 'echosense_extended' in downstream:
+            extended = downstream['echosense_extended']
+            print(f"  EchoSense Extended: {extended.get('trust_level', 'unknown')} (Nodes: {extended.get('network_nodes', 0)})")
+    
+    if args.verbose:
+        print(f"\n📋 Additional Details:")
+        print(f"  Analysis timestamp: Generated on demand")
+        print(f"  Confidence band: {'High' if result['echo_sense'] > 0.8 else 'Medium' if result['echo_sense'] > 0.5 else 'Low'}")
+        print(f"  Trust chain: SBSH→ΔS→Fold→Glyph→Ancestry→EchoSense")
+        print(f"  Framework: Math-anchored symbolic detection (no neural dependencies)")
+
+
+if __name__ == "__main__":
+    main_cli()
 
 if __name__ == "__main__":
     main_cli()
