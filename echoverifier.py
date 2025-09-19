@@ -207,6 +207,48 @@ class EchoVerifier:
         if kwargs.get("enable_downstream", True):
             result["downstream"] = downstream_hooks.integrate_downstream_hooks(result)
         
+        # Integrate new ML/AI features
+        try:
+            from adaptive_sbsm import adaptive_sbsm_analysis
+            from webhook_integration import send_webhook_notifications
+            from excitement_layer import generate_excitement_triggers
+            import logging
+            
+            logger = logging.getLogger(__name__)
+            
+            # Adaptive SBSM analysis
+            detector_results = {
+                'sbsm': sbsm_result,
+                'delta_s': delta_s_result,
+                'echosense': {'echo_sense': echo_sense_score}
+            }
+            
+            adaptive_results = adaptive_sbsm_analysis(sbsm_result, detector_results)
+            result['adaptive_ml'] = adaptive_results
+            
+            # Send webhook notifications (only if enabled)
+            webhook_results = send_webhook_notifications(result)
+            result['webhook_status'] = webhook_results
+            
+            # Generate UI excitement triggers
+            excitement_triggers = generate_excitement_triggers(
+                verdict, 
+                adaptive_results.get('adjusted_confidence', echo_sense_score),
+                echo_sense_score
+            )
+            result['excitement_triggers'] = excitement_triggers
+            
+        except ImportError as e:
+            # If new modules aren't available, continue without them
+            pass
+        except Exception as e:
+            # Log error but don't fail the main process
+            try:
+                import logging
+                logging.getLogger(__name__).error(f"Error in new features: {e}")
+            except:
+                pass
+        
         return result
     
     def _check_vault_permission(self, echo_sense_score: float, ancestry_depth: int) -> bool:

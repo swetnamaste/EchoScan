@@ -129,7 +129,33 @@ def sds1_dna_sequencing(echoverifier_result):
 
 def rps1_paradox_synthesis(echoverifier_result):
     """RPS-1 paradox synthesis hook."""
-    return RPS1.paradox_synthesis(
-        echoverifier_result["input"],
-        echoverifier_result["fold_vector"]
-    )
+    # Enhanced RPS-1 integration with forward/backward symbolic binding
+    try:
+        from adaptive_sbsm import paradox_hooks
+        
+        # Get enhanced paradox synthesis
+        enhanced_result = paradox_hooks.paradox_synthesis(
+            echoverifier_result["input"],
+            echoverifier_result["fold_vector"]
+        )
+        
+        # Combine with original RPS1 result
+        original_result = RPS1.paradox_synthesis(
+            echoverifier_result["input"],
+            echoverifier_result["fold_vector"]
+        )
+        
+        # Merge results
+        original_result.update({
+            'enhanced_paradox': enhanced_result,
+            'forward_backward_binding': True
+        })
+        
+        return original_result
+        
+    except ImportError:
+        # Fallback to original implementation
+        return RPS1.paradox_synthesis(
+            echoverifier_result["input"],
+            echoverifier_result["fold_vector"]
+        )

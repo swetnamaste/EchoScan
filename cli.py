@@ -128,6 +128,13 @@ Integration hooks available: TraceView, EchoVault, CollapseGlyph, EchoCradle, Ec
     parser.add_argument('--unlock', type=str, help='Run EchoLock unlock procedure')
     parser.add_argument('--ancestry', type=str, help='Perform ancestry depth analysis')
     parser.add_argument('--export-verifier', type=str, help='Export verifier data in structured format')
+    
+    # New webhook and excitement layer options
+    parser.add_argument('--webhook-test', action='store_true', help='Test webhook notifications with sample data')
+    parser.add_argument('--export-json', type=str, help='Export EchoScan results as JSON to file')
+    parser.add_argument('--excitement-demo', type=str, help='Generate excitement layer demo for given verdict')
+    parser.add_argument('--ml-status', action='store_true', help='Show ML/AI drift immunity status')
+    
     # Additional options
     parser.add_argument('--input-file', type=str, help='Read input from file')
     parser.add_argument('--output-file', type=str, help='Write output to file')
@@ -272,6 +279,91 @@ def main_cli():
             else:
                 print(json.dumps(result, indent=2))
             return
+
+        # New feature handlers
+        if args.webhook_test:
+            try:
+                from webhook_integration import send_webhook_notifications
+                
+                # Create sample data for testing
+                sample_result = {
+                    'verdict': 'Hallucination',
+                    'confidence': 0.85,
+                    'echo_sense': 0.72,
+                    'delta_s': 0.06,
+                    'glyph_id': 'TEST-1234',
+                    'vault_permission': False,
+                    'input': 'This is a test message for webhook testing'
+                }
+                
+                webhook_results = send_webhook_notifications(sample_result)
+                print("Webhook Test Results:")
+                print(json.dumps(webhook_results, indent=2))
+                return
+                
+            except ImportError:
+                print("Webhook integration not available")
+                return
+            except Exception as e:
+                print(f"Webhook test failed: {e}")
+                return
+
+        if args.export_json:
+            target = input_data if input_data else args.export_json
+            if echoverifier:
+                result = echoverifier.run(target)
+                try:
+                    from webhook_integration import export_json
+                    
+                    json_export = export_json(result, args.output_file)
+                    if not args.output_file:
+                        print(json_export)
+                    else:
+                        print(f"Results exported to {args.output_file}")
+                    return
+                except ImportError:
+                    print(json.dumps(result, indent=2))
+                    return
+            else:
+                print("EchoVerifier not available")
+                return
+
+        if args.excitement_demo:
+            try:
+                from excitement_layer import generate_excitement_triggers
+                
+                verdict = args.excitement_demo
+                confidence = 0.85 if verdict == 'Authentic' else 0.75
+                echo_sense = 0.80 if verdict == 'Authentic' else 0.65
+                
+                excitement_data = generate_excitement_triggers(verdict, confidence, echo_sense)
+                
+                print(f"Excitement Layer Demo for '{verdict}' verdict:")
+                print(json.dumps(excitement_data, indent=2))
+                
+                if excitement_data.get('excitement_enabled'):
+                    print("\nJavaScript files available at:")
+                    print("- static/excitement.js")
+                    print("- static/excitement.css")
+                    print("- examples_react_excitement.jsx")
+                    print("- examples_streamlit_excitement.py")
+                
+                return
+            except ImportError:
+                print("Excitement layer not available")
+                return
+
+        if args.ml_status:
+            try:
+                from adaptive_sbsm import get_ml_drift_immunity_status
+                
+                status = get_ml_drift_immunity_status()
+                print("ML/AI Drift Immunity Status:")
+                print(json.dumps(status, indent=2))
+                return
+            except ImportError:
+                print("Adaptive SBSM not available")
+                return
 
         # Output to file if specified
         if args.json and result:

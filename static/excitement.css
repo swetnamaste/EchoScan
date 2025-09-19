@@ -1,0 +1,123 @@
+
+/* EchoScan Excitement Layer CSS Animations */
+
+@keyframes float-up {
+    0% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-100vh);
+        opacity: 0;
+    }
+}
+
+@keyframes gentle-sway {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(-5px);
+    }
+    75% {
+        transform: translateX(5px);
+    }
+}
+
+@keyframes sparkle {
+    0%, 100% {
+        opacity: 0;
+        transform: scale(0);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes pulse-glow {
+    0%, 100% {
+        box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+    }
+}
+
+.echoscan-balloon {
+    position: fixed;
+    width: 40px;
+    height: 50px;
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    animation: float-up 3s ease-out forwards;
+    z-index: 9998;
+}
+
+.echoscan-balloon::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    width: 1px;
+    height: 30px;
+    background-color: #333;
+    transform: translateX(-50%);
+}
+
+.echoscan-sparkle {
+    position: fixed;
+    width: 4px;
+    height: 4px;
+    background-color: gold;
+    border-radius: 50%;
+    animation: sparkle 1s infinite;
+    z-index: 9998;
+}
+
+.echoscan-message {
+    position: fixed;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 2em;
+    font-weight: bold;
+    color: #333;
+    text-align: center;
+    z-index: 10000;
+    pointer-events: none;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    animation: pulse-glow 2s infinite;
+}
+
+/* React/Streamlit specific classes */
+.echoscan-excitement-container {
+    position: relative;
+    overflow: hidden;
+}
+
+.echoscan-verdict-display {
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.echoscan-verdict-authentic {
+    background: linear-gradient(135deg, #90EE90, #98FB98);
+    border: 2px solid #00FF00;
+}
+
+.echoscan-verdict-plausible {
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    border: 2px solid #FF8C00;
+}
+
+.echoscan-verdict-hallucination {
+    background: linear-gradient(135deg, #FF6347, #FF4500);
+    border: 2px solid #FF0000;
+}
+
+/* Streamlit specific styling */
+.stApp .echoscan-excitement-container {
+    margin: 10px 0;
+}
