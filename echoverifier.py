@@ -20,9 +20,18 @@ class EchoFold:
         # Mathematical vector generation based on input characteristics
         vec = []
         combined = input_data + hash_result
+        
+        # Handle empty string case
+        if len(combined) == 0:
+            return [0.0] * 16  # Return zero vector for empty input
+        
         for i in range(16):  # 16-dimensional vector
-            val = sum(ord(c) * (i + 1) for c in combined[i::16]) / len(combined)
-            vec.append(round(val / 255.0, 6))  # Normalize to [0,1]
+            char_slice = combined[i::16]
+            if char_slice:  # Only process if slice has characters
+                val = sum(ord(c) * (i + 1) for c in char_slice) / len(combined)
+                vec.append(round(val / 255.0, 6))  # Normalize to [0,1]
+            else:
+                vec.append(0.0)  # Default to 0 if no characters in slice
         return vec
     
     @staticmethod
@@ -175,8 +184,8 @@ class EchoVerifier:
         # Step 7: Vault permission check
         vault_permission = self._check_vault_permission(echo_sense_score, ancestry_depth)
         
-        # Step 8: Final verdict determination
-        verdict = self._determine_verdict(
+        # Step 8: Final verdict determination with explanation
+        verdict, explanation = self._determine_verdict_with_explanation(
             delta_s_value, fold_similarity, glyph_classification, 
             ancestry_depth, echo_sense_score
         )
@@ -206,12 +215,93 @@ class EchoVerifier:
         # Integrate downstream hooks
         if kwargs.get("enable_downstream", True):
             result["downstream"] = downstream_hooks.integrate_downstream_hooks(result)
+            # Update explanation with downstream hook information
+            verdict, explanation = self._determine_verdict_with_explanation(
+                delta_s_value, fold_similarity, glyph_classification, 
+                ancestry_depth, echo_sense_score, result.get("downstream")
+            )
+        
+        # Add explanation to final result
+        result["explanation"] = explanation
         
         return result
     
     def _check_vault_permission(self, echo_sense_score: float, ancestry_depth: int) -> bool:
         """Check if result qualifies for vault storage."""
         return echo_sense_score > 0.5 and ancestry_depth >= 2
+    
+    def _determine_verdict_with_explanation(
+        self, 
+        delta_s: float, 
+        fold_similarity: float, 
+        glyph_classification: Dict[str, Any],
+        ancestry_depth: int, 
+        echo_sense: float,
+        downstream_result: Dict[str, Any] = None
+    ) -> Tuple[str, str]:
+        """
+        Determine final verdict using mathematical criteria with human-readable explanation.
+        Ensures zero false positives through conservative thresholds.
+        
+        Returns:
+            Tuple[str, str]: (verdict, explanation)
+        """
+        explanation_parts = []
+        
+        # Authentic criteria (highest confidence, zero false positives)
+        if (delta_s < 0.01 and 
+            fold_similarity > 0.85 and 
+            glyph_classification["family"] == "standard" and
+            ancestry_depth >= 3 and 
+            echo_sense > 0.8):
+            explanation_parts.append(f"ΔS drift minimal ({delta_s:.6f})")
+            explanation_parts.append(f"fold similarity high ({fold_similarity:.3f})")
+            explanation_parts.append(f"standard glyph family")
+            explanation_parts.append(f"sufficient ancestry depth ({ancestry_depth})")
+            explanation_parts.append(f"high EchoSense score ({echo_sense:.3f})")
+            explanation = f"Verdict = Authentic ({', '.join(explanation_parts)})"
+            return "Authentic", explanation
+        
+        # Hallucination criteria (clear indicators of synthetic content)
+        elif (delta_s > 0.05 or 
+              fold_similarity < 0.3 or
+              glyph_classification["family"] == "synthetic" or
+              echo_sense < 0.3):
+            if delta_s > 0.05:
+                explanation_parts.append(f"high ΔS drift ({delta_s:.6f})")
+            if fold_similarity < 0.3:
+                explanation_parts.append(f"low fold similarity ({fold_similarity:.3f})")
+            if glyph_classification["family"] == "synthetic":
+                explanation_parts.append(f"synthetic glyph family")
+            if echo_sense < 0.3:
+                explanation_parts.append(f"low EchoSense score ({echo_sense:.3f})")
+            
+            # Add downstream hook disagreements
+            if downstream_result:
+                if downstream_result.get("sds1", {}).get("sequence_integrity") != "stable":
+                    explanation_parts.append("SDS-1 DNA instability detected")
+                if downstream_result.get("echoseal", {}).get("trace_status") != "active":
+                    explanation_parts.append("EchoSeal trace inactive")
+                
+            explanation = f"Verdict = Hallucination ({', '.join(explanation_parts)})"
+            return "Hallucination", explanation
+        
+        # Plausible (middle ground)
+        else:
+            explanation_parts.append(f"ΔS drift moderate ({delta_s:.6f})")
+            explanation_parts.append(f"fold similarity mid-range ({fold_similarity:.3f})")
+            explanation_parts.append(f"ancestry depth {ancestry_depth}")
+            explanation_parts.append(f"EchoSense score {echo_sense:.3f}")
+            
+            # Check for downstream hook conflicts
+            if downstream_result:
+                echoseal_status = downstream_result.get("echoseal", {}).get("trace_status", "unknown")
+                sds1_integrity = downstream_result.get("sds1", {}).get("sequence_integrity", "unknown")
+                if echoseal_status != sds1_integrity:
+                    explanation_parts.append(f"EchoSeal-SDS-1 disagreement ({echoseal_status} vs {sds1_integrity})")
+                    
+            explanation = f"Verdict = Plausible ({', '.join(explanation_parts)})"
+            return "Plausible", explanation
     
     def _determine_verdict(
         self, 
@@ -222,28 +312,12 @@ class EchoVerifier:
         echo_sense: float
     ) -> str:
         """
-        Determine final verdict using mathematical criteria.
-        Ensures zero false positives through conservative thresholds.
+        Backwards compatibility method for verdict determination.
         """
-        
-        # Authentic criteria (highest confidence, zero false positives)
-        if (delta_s < 0.01 and 
-            fold_similarity > 0.85 and 
-            glyph_classification["family"] == "standard" and
-            ancestry_depth >= 3 and 
-            echo_sense > 0.8):
-            return "Authentic"
-        
-        # Hallucination criteria (clear indicators of synthetic content)
-        elif (delta_s > 0.05 or 
-              fold_similarity < 0.3 or
-              glyph_classification["family"] == "synthetic" or
-              echo_sense < 0.3):
-            return "Hallucination"
-        
-        # Plausible (middle ground)
-        else:
-            return "Plausible"
+        verdict, _ = self._determine_verdict_with_explanation(
+            delta_s, fold_similarity, glyph_classification, ancestry_depth, echo_sense
+        )
+        return verdict
     
     def unlock(self, input_data: str) -> Dict[str, Any]:
         """EchoLock unlock functionality."""

@@ -1,0 +1,78 @@
+{
+  "detectors": {
+    "sbsm": {
+      "module": "detectors.sbsm",
+      "class": "SbsmDetector",
+      "enabled": true,
+      "description": "SBSH Mathematical Hash detector",
+      "dependencies": []
+    },
+    "delta_s": {
+      "module": "detectors.delta_s", 
+      "class": "DeltaSDetector",
+      "enabled": true,
+      "description": "Delta S drift analysis detector",
+      "dependencies": ["sbsm"]
+    },
+    "glyph": {
+      "module": "detectors.glyph",
+      "class": "GlyphDetector", 
+      "enabled": true,
+      "description": "Glyph family classification detector",
+      "dependencies": []
+    },
+    "echosense": {
+      "module": "detectors.echosense",
+      "class": "EchoSenseDetector",
+      "enabled": true,
+      "description": "Trust scoring and network analysis",
+      "dependencies": ["delta_s", "glyph"]
+    },
+    "mimetic_drift": {
+      "module": "detectors.mimetic_drift",
+      "class": "MimeticDriftDetector",
+      "enabled": true,
+      "description": "Mimetic pattern drift detection",
+      "dependencies": []
+    },
+    "obelisk": {
+      "module": "detectors.obelisk",
+      "class": "ObeliskDetector",
+      "enabled": true,
+      "description": "Symbolic obelisk pattern analysis",
+      "dependencies": []
+    }
+  },
+  "symbolic_detectors": {
+    "stuttergate": {
+      "module": "detectors.stuttergate",
+      "class": "StuttergateDetector",
+      "enabled": true,
+      "description": "Stutter pattern gate detection",
+      "symbolic_patterns": ["repetition", "echo", "mirror"]
+    },
+    "motif": {
+      "module": "detectors.motif",
+      "class": "MotifDetector", 
+      "enabled": true,
+      "description": "Motif pattern recognition",
+      "symbolic_patterns": ["linguistic", "geometric", "temporal"]
+    }
+  },
+  "experimental_detectors": {
+    "ai_drift": {
+      "module": "detectors.ai_drift",
+      "class": "AiDriftDetector",
+      "enabled": false,
+      "description": "Experimental AI drift detection",
+      "dependencies": ["echosense"],
+      "experimental": true
+    }
+  },
+  "registry_meta": {
+    "version": "1.0.0",
+    "last_updated": "2024-01-01T00:00:00Z",
+    "supported_types": ["detectors", "symbolic_detectors", "experimental_detectors"],
+    "auto_discovery": true
+  }
+}

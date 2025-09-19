@@ -193,6 +193,7 @@ def main_cli():
                 if not args.json:
                     print(f"EchoVerifier Analysis for: {target[:50]}...")
                     print(f"Verdict: {result['verdict']}")
+                    print(f"Explanation: {result.get('explanation', 'No explanation available')}")
                     print(f"Delta S: {result['delta_s']}")
                     print(f"Glyph ID: {result['glyph_id']}")
                     print(f"Ancestry Depth: {result['ancestry_depth']}")
