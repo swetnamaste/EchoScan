@@ -109,3 +109,174 @@ def compute_advisory_flags(results):
         if isinstance(mod_res, dict) and "advisory_flag" in mod_res:
             flags.append(mod_res["advisory_flag"])
     return flags
+
+def run_echo_verifier(metrics):
+    """
+    Refines EchoVerifier to produce Authentic / Plausible / Synthetic verdicts 
+    based on strict thresholds and mathematical consistency.
+    Uses delta_s, echo_fold_sim, glyph_match, and ancestry_depth from metrics for decision logic.
+    
+    Args:
+        metrics (dict): Dictionary containing delta_s, echo_fold_sim, glyph_match, ancestry_depth
+        
+    Returns:
+        str: Verdict - "Authentic", "Plausible", or "Synthetic"
+    """
+    delta_s = metrics.get('delta_s', 0.0)
+    echo_fold_sim = metrics.get('echo_fold_sim', 0.0)
+    glyph_match = metrics.get('glyph_match', '')
+    ancestry_depth = metrics.get('ancestry_depth', 0)
+    
+    # Mathematical consistency check - ensure all values are within expected ranges
+    if not (0.0 <= delta_s <= 1.0):
+        delta_s = max(0.0, min(1.0, delta_s))
+    if not (0.0 <= echo_fold_sim <= 1.0):
+        echo_fold_sim = max(0.0, min(1.0, echo_fold_sim))
+    if ancestry_depth < 0:
+        ancestry_depth = 0
+        
+    # Determine glyph family based on glyph_match pattern
+    glyph_family = "standard"
+    if isinstance(glyph_match, str):
+        if "synthetic" in glyph_match.lower() or "ai" in glyph_match.lower():
+            glyph_family = "synthetic"
+        elif "hybrid" in glyph_match.lower():
+            glyph_family = "hybrid"
+    
+    # Strict thresholds for authenticity verification (based on EchoVerifier._determine_verdict)
+    # Authentic criteria (highest confidence, zero false positives)
+    if (delta_s < 0.01 and 
+        echo_fold_sim > 0.85 and 
+        glyph_family == "standard" and
+        ancestry_depth >= 3):
+        return "Authentic"
+    
+    # Synthetic criteria (clear indicators of synthetic content) 
+    elif (delta_s > 0.05 or 
+          echo_fold_sim < 0.3 or
+          glyph_family == "synthetic" or
+          ancestry_depth < 2):
+        return "Synthetic"
+    
+    # Plausible (middle ground with mathematical consistency)
+    else:
+        return "Plausible"
+
+def generate_report(stream_id, metrics, verdict, advisory_flags):
+    """
+    Outputs a full structured report for EchoScan results, ensuring all reporting is math-backed.
+    Logs the report to TraceView and stores it in EchoVault.
+    
+    Args:
+        stream_id (str): Unique identifier for the data stream
+        metrics (dict): Dictionary containing verification metrics
+        verdict (str): The authenticity verdict (Authentic/Plausible/Synthetic)
+        advisory_flags (list): List of advisory flags from analysis
+        
+    Returns:
+        dict: Structured report with mathematical backing
+    """
+    import time
+    import json
+    
+    # Generate mathematical report with full backing
+    report = {
+        "stream_id": stream_id,
+        "timestamp": time.time(),
+        "verdict": verdict,
+        "confidence_score": _calculate_confidence_score(metrics, verdict),
+        "metrics": {
+            "delta_s": metrics.get('delta_s', 0.0),
+            "echo_fold_similarity": metrics.get('echo_fold_sim', 0.0),
+            "glyph_match": metrics.get('glyph_match', ''),
+            "ancestry_depth": metrics.get('ancestry_depth', 0),
+            "echo_sense": metrics.get('echo_sense', 0.0)
+        },
+        "mathematical_validation": {
+            "delta_s_valid": 0.0 <= metrics.get('delta_s', 0.0) <= 1.0,
+            "fold_similarity_valid": 0.0 <= metrics.get('echo_fold_sim', 0.0) <= 1.0,
+            "ancestry_depth_valid": metrics.get('ancestry_depth', 0) >= 0,
+            "threshold_analysis": _analyze_thresholds(metrics, verdict)
+        },
+        "advisory_flags": advisory_flags,
+        "vault_eligible": _check_vault_eligibility(metrics),
+        "report_version": "1.0.0"
+    }
+    
+    # Log to TraceView for result tracking
+    traceview.write({
+        "echoscan_report": report,
+        "metadata": {
+            "report_type": "echoverifier_analysis",
+            "processing_pipeline": "run_echo_verifier -> generate_report"
+        }
+    })
+    
+    # Store in EchoVault for persistent storage
+    vault.log({
+        "report": report,
+        "stream_processing": {
+            "stream_id": stream_id,
+            "verdict": verdict,
+            "mathematical_backing": True
+        }
+    })
+    
+    return report
+
+def _calculate_confidence_score(metrics, verdict):
+    """Calculate mathematical confidence score for the verdict."""
+    delta_s = metrics.get('delta_s', 0.0)
+    echo_fold_sim = metrics.get('echo_fold_sim', 0.0)
+    ancestry_depth = metrics.get('ancestry_depth', 0)
+    
+    # Base confidence calculation with mathematical weighting
+    if verdict == "Authentic":
+        # High confidence for authentic - strict thresholds met
+        confidence = min(1.0, (1.0 - delta_s) * 0.3 + echo_fold_sim * 0.4 + min(ancestry_depth / 10.0, 0.3))
+    elif verdict == "Synthetic": 
+        # High confidence for synthetic - clear indicators present
+        confidence = min(1.0, delta_s * 0.4 + (1.0 - echo_fold_sim) * 0.4 + max(0, (5 - ancestry_depth)) / 10.0 * 0.2)
+    else:  # Plausible
+        # Medium confidence for plausible - mixed signals
+        confidence = 0.5 + abs(echo_fold_sim - 0.5) * 0.3 + abs(delta_s - 0.025) * 0.2
+    
+    return round(min(1.0, max(0.0, confidence)), 4)
+
+def _analyze_thresholds(metrics, verdict):
+    """Analyze how metrics compare to decision thresholds."""
+    delta_s = metrics.get('delta_s', 0.0)
+    echo_fold_sim = metrics.get('echo_fold_sim', 0.0)
+    ancestry_depth = metrics.get('ancestry_depth', 0)
+    
+    return {
+        "delta_s_threshold": {
+            "value": delta_s,
+            "authentic_threshold": 0.01,
+            "synthetic_threshold": 0.05,
+            "meets_authentic": delta_s < 0.01,
+            "meets_synthetic": delta_s > 0.05
+        },
+        "echo_fold_threshold": {
+            "value": echo_fold_sim,
+            "authentic_threshold": 0.85,
+            "synthetic_threshold": 0.3,
+            "meets_authentic": echo_fold_sim > 0.85,
+            "meets_synthetic": echo_fold_sim < 0.3
+        },
+        "ancestry_threshold": {
+            "value": ancestry_depth,
+            "authentic_threshold": 3,
+            "synthetic_threshold": 2,
+            "meets_authentic": ancestry_depth >= 3,
+            "meets_synthetic": ancestry_depth < 2
+        }
+    }
+
+def _check_vault_eligibility(metrics):
+    """Check if metrics qualify for vault storage based on mathematical criteria."""
+    echo_sense = metrics.get('echo_sense', 0.0)
+    ancestry_depth = metrics.get('ancestry_depth', 0)
+    
+    # Based on EchoVerifier._check_vault_permission logic
+    return echo_sense > 0.5 and ancestry_depth >= 2
