@@ -1,4 +1,4 @@
-"""obelisk detector module stub"""
+"""Obelisk Detector Module"""
 
 def run(*args, **kwargs):
     """Stub implementation for obelisk detector"""

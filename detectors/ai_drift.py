@@ -1,4 +1,4 @@
-"""ai_drift detector module stub"""
+"""AI Drift Detector Module"""
 
 def run(*args, **kwargs):
     """Stub implementation for ai_drift detector"""

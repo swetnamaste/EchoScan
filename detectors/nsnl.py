@@ -1,4 +1,4 @@
-"""nsnl detector module stub"""
+"""NSNL Detector Module"""
 
 def run(*args, **kwargs):
     """Stub implementation for nsnl detector"""
