@@ -10,7 +10,8 @@ class TraceView:
         
     def summary(self, results):
         """Generate summary of trace data."""
-        return f"trace_summary_{len(self.traces)}"
+        sbsh_count = len([t for t in self.traces if "sbsh" in t])
+        return f"trace_summary: {len(self.traces)} entries, {sbsh_count} SBSH traces"
 
 # Global traceview instance  
 traceview = TraceView()

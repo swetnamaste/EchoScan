@@ -1,4 +1,4 @@
-"""Obelisk detector module for EchoScan."""
+"""Obelisk Detector Module"""
 
 import numpy as np
 

@@ -1,4 +1,4 @@
-"""AI drift detector module for EchoScan."""
+"""AI Drift Detector Module"""
 
 import numpy as np
 

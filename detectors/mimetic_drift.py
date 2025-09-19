@@ -1,4 +1,4 @@
-"""mimetic_drift detector module stub"""
+"""Mimetic Drift Detector Module"""
 
 def run(*args, **kwargs):
     """Stub implementation for mimetic_drift detector"""

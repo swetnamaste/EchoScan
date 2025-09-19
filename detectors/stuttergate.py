@@ -1,4 +1,4 @@
-"""stuttergate detector module stub"""
+"""StutterGate Detector Module"""
 
 def run(*args, **kwargs):
     """Stub implementation for stuttergate detector"""

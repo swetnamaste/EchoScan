@@ -1,4 +1,4 @@
-"""ecc_core detector module stub"""
+"""ECC Core Detector Module"""
 
 def run(*args, **kwargs):
     """Stub implementation for ecc_core detector"""

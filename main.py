@@ -10,6 +10,10 @@ def normalize_input(input_file, input_type):
 
 def run_pipeline(input_file, input_type, **flags):
     S = normalize_input(input_file, input_type)
+    
+    # Generate SBSH hash early for integration with other modules
+    sbsh_result = sbsh_module.sbsh_hash(S, flags.get("glyph_digest"))
+    
     # SBSM is the central stem
     sbsm_result = sbsm.run(S)
     delta_s_result = delta_s.run(S)

@@ -1,4 +1,4 @@
-"""voicecradle detector module stub"""
+"""VoiceCradle Detector Module"""
 
 def run(*args, **kwargs):
     """Stub implementation for voicecradle detector"""
