@@ -1,26 +1,17 @@
-"""TraceView Module - Integration hook for SBSH"""
+"""TraceView module for result tracking."""
 
-import sbsh_module
+class TraceView:
+    def __init__(self):
+        self.traces = []
+        
+    def write(self, results):
+        """Write trace data."""
+        self.traces.append(results)
+        
+    def summary(self, results):
+        """Generate summary of trace data."""
+        sbsh_count = len([t for t in self.traces if "sbsh" in t])
+        return f"trace_summary: {len(self.traces)} entries, {sbsh_count} SBSH traces"
 
-_trace_data = []
-
-def write(results):
-    """Write trace data - integration point for SBSH"""
-    global _trace_data
-    
-    # Store SBSH traces if available
-    if "sbsh" in results:
-        sbsh_trace = {
-            "timestamp": "placeholder_timestamp",
-            "sbsh_data": results["sbsh"],
-            "integration_hooks": ["TraceView", "EchoVault", "CollapseGlyph", "EchoCradle"]
-        }
-        _trace_data.append(sbsh_trace)
-    
-    # Store other results
-    _trace_data.append({"results": results})
-
-def summary(results):
-    """Generate trace summary"""
-    sbsh_count = len([t for t in _trace_data if "sbsh_data" in t])
-    return f"trace_summary: {len(_trace_data)} entries, {sbsh_count} SBSH traces"
+# Global traceview instance  
+traceview = TraceView()

@@ -1,1 +1,1 @@
-"""Vault module stubs"""
+# Vault package for EchoScan

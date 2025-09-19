@@ -1,4 +1,8 @@
 """Foldback Detector Module"""
 
-def run(*args):
-    return {"echo_score_penalty": 0}
+def run(*args, **kwargs):
+    """Stub implementation for foldback detector"""
+    return {
+        "result": "stub",
+        "echo_score_modifier": 0.0
+    }

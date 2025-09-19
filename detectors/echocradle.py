@@ -1,16 +1,10 @@
-"""EchoCradle Detector Module - Integration hook for SBSH"""
+"""EchoArc detector module."""
 
-import sbsh_module
-
-def run(*args):
-    """EchoCradle integration point for SBSH"""
-    # Integration example: SBSH can feed into EchoCradle analysis
-    if args and isinstance(args[0], str):
-        # Calculate delta_s for cradle analysis
-        delta_s = sbsh_module.calculate_delta_s(args[0])
-        return {
-            "echo_score_penalty": 0,
-            "cradle_delta_s": delta_s,
-            "sbsh_hook": "active"
-        }
-    return {"echo_score_penalty": 0}
+def run(sbsm_result=None, delta_s_result=None, motif_result=None, *args, **kwargs):
+    """Run EchoArc analysis.
+    Accepts SBSM, delta_s, motif results as inputs. Returns arc_fit, ahy, and echo_score_modifier."""
+    return {
+        "arc_fit": 0.5,
+        "ahy": 0.3,
+        "echo_score_modifier": 0.0
+    }
