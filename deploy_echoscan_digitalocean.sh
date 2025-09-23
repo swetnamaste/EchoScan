@@ -6,7 +6,7 @@ REPO_URL="https://github.com/swetnamaste/EchoScan.git"
 APP_DIR="$HOME/EchoScan"
 DOCKER_IMAGE="echoscan"
 CONTAINER_NAME="echoscan_prod"
-PORT=8000
+PORT=8080
 
 # 1. Clone the latest code
 if [ -d "$APP_DIR" ]; then
@@ -37,7 +37,7 @@ fi
 
 # 5. Run the new container with environment
 echo "==> Starting new container..."
-docker run -d --name $CONTAINER_NAME -p $PORT:8000 --env-file .env $DOCKER_IMAGE
+docker run -d --name $CONTAINER_NAME -p $PORT:8080 --env-file .env $DOCKER_IMAGE
 
 sleep 10
 

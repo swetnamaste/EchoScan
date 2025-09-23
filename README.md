@@ -24,8 +24,19 @@ python cli.py --paradox "Some phrase"
 
 ### API
 ```bash
-uvicorn api:app --host 0.0.0.0 --port 8000
+# Run locally (reads PORT environment variable, defaults to 8080)
+python api.py
+
+# Or with uvicorn directly
+uvicorn api:app --host 0.0.0.0 --port 8080
 ```
+
+**API Endpoints:**
+- `GET /health` - Health check for DigitalOcean and container platforms
+- `POST /api/scan` - Main authenticity analysis endpoint
+- `POST /api/echoverifier` - EchoVerifier analysis only
+- `POST /api/sbsh` - SBSH symbolic hash generation
+- `GET /api/status` - API status and available modules
 
 ### Deployment (DigitalOcean)
 1. Clone repo & build:
@@ -36,8 +47,11 @@ docker build -t echoscan .
 ```
 2. Run container:
     ```bash
-docker run -p 8000:8000 echoscan
+docker run -p 8080:8080 echoscan
 ```
+
+**Environment Variables:**
+- `PORT=8080` (default) - Port for the API server to run on
 3. Set up DigitalOcean App Platform or Droplet with above Docker setup.
 
 ## Vault
