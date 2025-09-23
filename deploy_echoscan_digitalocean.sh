@@ -37,7 +37,7 @@ fi
 
 # 5. Run the new container with environment
 echo "==> Starting new container..."
-docker run -d --name $CONTAINER_NAME -p $PORT:8000 --env-file .env $DOCKER_IMAGE
+docker run -d --name $CONTAINER_NAME -p $PORT:8080 --env-file .env $DOCKER_IMAGE
 
 sleep 10
 
