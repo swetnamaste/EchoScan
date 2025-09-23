@@ -24,7 +24,7 @@ python cli.py --paradox "Some phrase"
 
 ### API
 ```bash
-uvicorn api:app --host 0.0.0.0 --port 8000
+uvicorn api:app --host 0.0.0.0 --port 8080
 ```
 
 ### Deployment (DigitalOcean)
@@ -36,7 +36,7 @@ docker build -t echoscan .
 ```
 2. Run container:
     ```bash
-docker run -p 8000:8000 echoscan
+docker run -p 8080:8080 echoscan
 ```
 3. Set up DigitalOcean App Platform or Droplet with above Docker setup.
 
